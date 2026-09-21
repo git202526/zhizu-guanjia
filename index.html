@@ -1031,48 +1031,114 @@ function genAllBills(){
   toast(n?('已生成 '+n+' 笔本月账单'):'本月账单已全部存在');
 }
 /* ================= 照片账单（Canvas） ================= */
+function cnMoney(n){
+  if(n===null||n===undefined||isNaN(n))return'零元整';
+  var neg=n<0;n=Math.abs(n);
+  var d='零壹贰叁肆伍陆柒捌玖';
+  var u=['','拾','佰','仟'],b=['','万','亿'];
+  var yuan=Math.floor(n),dec=Math.round((n-yuan)*100);
+  var jiao=Math.floor(dec/10),fen=dec%10;
+  var s='',zero=false,groups=[];var x=yuan;
+  while(x>0){groups.push(x%10000);x=Math.floor(x/10000)}
+  for(var i=groups.length-1;i>=0;i--){
+    var g=groups[i],sec='';
+    for(var k=3;k>=0;k--){
+      var v=Math.floor(g/Math.pow(10,k))%10;
+      if(v===0){zero=true}
+      else{
+        if(zero&&(s!==''||sec!=='')){sec+='零'}
+        zero=false;
+        sec+=d[v]+u[k];
+      }
+    }
+    if(sec!==''){s+=sec+b[i]}
+  }
+  if(yuan===0)s='零';
+  s+='元';
+  if(jiao===0&&fen===0)s+='整';
+  else{
+    if(jiao>0)s+=d[jiao]+'角';
+    else if(fen>0)s+='零';
+    if(fen>0)s+=d[fen]+'分';
+  }
+  return (neg?'负':'')+s;
+}
+function rr(g,x,y,w,h,r){g.beginPath();if(g.roundRect){g.roundRect(x,y,w,h,r)}else{g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}g.fill()}
 function drawBill(b){
   var r=room(b.roomId),p=prop(r.prop);
-  var W=720,H=1020,c=document.createElement('canvas');c.width=W;c.height=H;
+  var W=750,pad=44,X1=pad,X2=W-pad;
+  var nItems=b.items.length;
+  var H=1060+nItems*62;
+  var c=document.createElement('canvas');c.width=W;c.height=H;
   var g=c.getContext('2d');
   g.fillStyle='#fff';g.fillRect(0,0,W,H);
-  g.fillStyle='#2E90FA';g.fillRect(0,0,W,112);
-  g.fillStyle='#fff';g.font='bold 42px sans-serif';g.textAlign='left';g.fillText('智租管家',44,64);
-  g.font='22px sans-serif';g.textAlign='right';g.fillText('电子账单 · 收款凭证',W-44,52);
-  g.font='15px sans-serif';g.fillText('ELECTRONIC BILL',W-44,78);
-  var y=160;
-  function row(label,val){g.fillStyle='#8a93a6';g.font='20px sans-serif';g.fillText(label,44,y);g.fillStyle='#1f2a3a';g.font='bold 22px sans-serif';g.fillText(val,250,y);y+=46}
-  g.textAlign='left';
-  row('小区',p.name);row('房间',r.code+' · '+r.type+' '+r.area);row('租客',r.tName||'—');row('电话',r.tPhone||'—');row('账期',b.p);row('收租日',b.due);
-  g.fillStyle='#2E90FA';g.fillRect(44,y,632,58);g.fillStyle='#fff';g.font='bold 22px sans-serif';g.fillText('费用明细',60,y+39);
-  y+=58;
-  b.items.forEach(function(it){
-    g.fillStyle='#5b6472';g.font='21px sans-serif';g.textAlign='left';g.fillText(it.name,60,y+12);
-    g.fillStyle='#1f2a3a';g.font='bold 23px sans-serif';g.textAlign='right';g.fillText('¥'+Number(it.amt).toFixed(2),W-60,y+12);
-    g.textAlign='left';y+=48;
+  /* 头部横幅 */
+  var hg=g.createLinearGradient(0,0,0,158);hg.addColorStop(0,'#2E90FA');hg.addColorStop(1,'#5EA9F9');
+  g.fillStyle=hg;g.fillRect(0,0,W,158);
+  g.fillStyle='#fff';g.textAlign='left';g.font='bold 46px sans-serif';g.fillText('智租管家',X1,74);
+  g.font='23px sans-serif';g.fillStyle='rgba(255,255,255,.92)';g.fillText('电子账单 · 收款凭证',X1,112);
+  g.font='22px sans-serif';g.fillStyle='rgba(255,255,255,.78)';g.textAlign='right';g.fillText('BILL · '+b.p,X2,64);
+  g.fillText('出账日期 '+todayStr(),X2,104);
+  /* 账单信息卡 */
+  var metaY=184,rowH=64,cPad=36,cH=3*rowH+cPad*2;
+  g.fillStyle='#fff';g.strokeStyle='#E7EDF5';g.lineWidth=2;
+  rr(g,X1,metaY,W-pad*2,cH,22);g.stroke();
+  var cells=[['小区',p.name],['房间',r.code+' · '+r.type+' '+r.area],['租客',r.tName||'—'],['电话',r.tPhone||'—'],['账期',b.p],['收租日',b.due]];
+  var lx=[X1+30,X1+356],vx=[X1+165,X1+486];
+  cells.forEach(function(cell,i){
+    var col=i%2,rowN=Math.floor(i/2);
+    var yy=metaY+cPad+rowN*rowH;
+    g.textAlign='left';
+    g.fillStyle='#98A1B3';g.font='22px sans-serif';g.fillText(cell[0],lx[col],yy+30);
+    g.fillStyle='#1B2537';g.font='bold 26px sans-serif';g.fillText(cell[1],vx[col],yy+30);
   });
-  g.strokeStyle='#e3e7ee';g.lineWidth=2;g.beginPath();g.moveTo(44,y);g.lineTo(W-44,y);g.stroke();y+=14;
-  g.fillStyle='#1f2a3a';g.font='bold 26px sans-serif';g.fillText('应收合计',60,y+18);
-  g.fillStyle='#E5484D';g.font='bold 34px sans-serif';g.textAlign='right';g.fillText('¥'+Number(b.amt).toFixed(2),W-60,y+18);
-  g.textAlign='left';y+=64;
-  var od=overdueDays(b);
-  if(b.st==='unpaid'){
-    g.fillStyle=od>0?'#E5484D':'#F79009';g.font='20px sans-serif';
-    g.fillText(od>0?('本账单已逾期 '+od+' 天，请尽快缴付'):('请于 '+b.due+' 前缴付'),60,y);y+=38;
-  }else{
-    g.fillStyle='#1FA36B';g.font='20px sans-serif';g.fillText('已于 '+b.paidAt+' 缴付（'+b.method+'）',60,y);y+=38;
-  }
-  g.fillStyle='#9aa3b2';g.font='17px sans-serif';
-  g.fillText('温馨提示：逾期未缴将影响续租，请按时缴付。',60,y);y+=30;
-  g.fillText('本账单由「智租管家」生成，如有疑问请联系房东。',60,y);y+=30;
-  g.fillText('生成时间：'+new Date().toLocaleString('zh-CN'),60,y);
+  /* 费用明细 */
+  var y=metaY+cH+28;
+  g.fillStyle='#2E90FA';g.fillRect(X1,y-18,6,30);
+  g.fillStyle='#1B2537';g.font='bold 28px sans-serif';g.textAlign='left';g.fillText('费用明细',X1+18,y);
+  var hdrY=y+22;
+  g.fillStyle='#98A1B3';g.font='21px sans-serif';g.fillText('项目',X1+30,hdrY+26);g.textAlign='right';g.fillText('金额（元）',X2-30,hdrY+26);
+  g.strokeStyle='#E3E8F0';g.lineWidth=2;g.setLineDash([6,8]);
+  g.beginPath();g.moveTo(X1+30,hdrY+42);g.lineTo(X2-30,hdrY+42);g.stroke();g.setLineDash([]);
+  y=hdrY+42;
+  b.items.forEach(function(it){
+    y+=62;
+    g.textAlign='left';g.fillStyle='#3A4557';g.font='28px sans-serif';g.fillText(it.name,X1+30,y);
+    g.textAlign='right';g.fillStyle='#1B2537';g.font='bold 29px sans-serif';g.fillText('¥'+Number(it.amt).toFixed(2),X2-30,y);
+    g.strokeStyle='#EEF1F6';g.lineWidth=1.5;g.beginPath();g.moveTo(X1+30,y+24);g.lineTo(X2-30,y+24);g.stroke();
+  });
+  y+=46;
+  /* 应收合计 */
+  g.fillStyle='#EFF6FF';
+  rr(g,X1,y,W-pad*2,132,20);
+  g.textAlign='left';g.fillStyle='#1B2537';g.font='bold 27px sans-serif';g.fillText('应收合计',X1+30,y+46);
+  g.textAlign='right';g.fillStyle='#E5484D';g.font='bold 44px sans-serif';g.fillText('¥'+Number(b.amt).toFixed(2),X2-30,y+50);
+  g.textAlign='left';g.fillStyle='#5C6B84';g.font='22px sans-serif';g.fillText('人民币 '+cnMoney(b.amt),X1+30,y+96);
+  y+=132+16;
+  /* 状态横幅 */
+  var od=overdueDays(b),stBg,stTxt;
+  if(b.st==='paid'){stBg='#1FA36B';stTxt='已于 '+b.paidAt+' 缴付（'+b.method+'）'}
+  else if(od>0){stBg='#E5484D';stTxt='本账单已逾期 '+od+' 天，请尽快缴付'}
+  else{stBg='#F79009';stTxt='请于 '+b.due+' 前缴付，感谢配合'}
+  g.fillStyle=stBg;
+  rr(g,X1,y,W-pad*2,66,16);
+  g.fillStyle='#fff';g.font='bold 26px sans-serif';g.textAlign='left';g.fillText(stTxt,X1+28,y+43);
+  y+=66+26;
+  /* 页脚 */
+  g.fillStyle='#98A1B3';g.font='22px sans-serif';
+  g.fillText('温馨提示：逾期未缴将影响续租，请按时缴付。',X1,y);y+=36;
+  g.fillText('本账单由「智租管家」生成，如有疑问请联系房东。',X1,y);y+=36;
+  g.fillText('生成时间：'+new Date().toLocaleString('zh-CN'),X1,y);y+=44;
+  g.strokeStyle='#EEF1F6';g.lineWidth=2;g.beginPath();g.moveTo(X1,y);g.lineTo(X2,y);g.stroke();y+=30;
+  g.fillStyle='#B7C0CE';g.font='20px sans-serif';g.textAlign='center';g.fillText('智租管家 · 租房管理',W/2,y);
   return c.toDataURL('image/png');
 }
 function openPhoto(bid){
   var b=DB.bills.filter(function(x){return x.id===bid})[0];if(!b)return;
   var r=room(b.roomId),url=drawBill(b);
   openModal('电子照片账单 · '+r.code,
-    '<img id="billPreview" src="'+url+'" style="width:100%;border-radius:12px;border:1px solid var(--line)">'+
+    '<img id="billPreview" src="'+url+'" style="width:100%;border-radius:12px;border:1px solid var(--line);display:block">'+
+    '<div style="font-size:12px;color:var(--muted);text-align:center;margin:10px 0 2px">长按图片可保存或分享给租客</div>'+
     '<div class="acts"><button class="btn-ghost" data-act="closeModal">关闭</button><button class="btn-pri" id="dlBill">下载图片</button></div>');
   $('#dlBill').addEventListener('click',function(){
     var a=document.createElement('a');a.href=url;a.download='账单-'+r.code+'-'+b.p+'.png';
