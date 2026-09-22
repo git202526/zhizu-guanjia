@@ -261,6 +261,7 @@ html[data-theme="dark"] .seg button.on{color:#0E1524}
 <script>
 /* ================= 工具 ================= */
 var KEY='zzgj_v1';
+var APP_VER='v1.1.1';
 function pad(n){return n<10?'0'+n:''+n}
 function fmtDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
 function todayStr(){return fmtDate(new Date())}
@@ -299,7 +300,7 @@ function buildDemo(){
     {id:uid(),roomId:'105',p:M,due:addDays(T,-12),items:[{name:'租金',amt:2000},{name:'水费',amt:22.5}],amt:2022.5,st:'unpaid',reminded:false},
     {id:uid(),roomId:'102',p:M,due:addDays(T,-7),items:[{name:'租金',amt:2800},{name:'水费',amt:36}],amt:2836,st:'unpaid',reminded:false},
     {id:uid(),roomId:'201',p:M,due:addDays(T,-2),items:[{name:'租金',amt:1800},{name:'水费',amt:9}],amt:1809,st:'unpaid',reminded:false},
-    {id:uid(),roomId:'103',p:QM,due:QM+'-25',items:[{name:'租金',amt:4500}],amt:4500,st:'paid',paidAt:addDays(T,-4),method:'微信',note:'',reminded:false,cyc:'q'},
+    {id:uid(),roomId:'103',p:M,due:M+'-25',items:[{name:'租金',amt:4500}],amt:4500,st:'paid',paidAt:addDays(T,-4),method:'微信',note:'',reminded:false,cyc:'q'},
     {id:uid(),roomId:'203',p:M,due:addDays(T,6),items:[{name:'租金',amt:3500},{name:'水费',amt:22.5}],amt:3522.5,st:'paid',paidAt:addDays(T,-2),method:'银行卡',note:'',reminded:false},
     {id:uid(),roomId:'101',p:PM,due:PM+'-01',items:[{name:'租金',amt:2200}],amt:2200,st:'paid',paidAt:PM+'-02',method:'微信',note:'',reminded:false},
     {id:uid(),roomId:'102',p:PM,due:PM+'-15',items:[{name:'租金',amt:2800},{name:'水费',amt:33}],amt:2833,st:'paid',paidAt:PM+'-16',method:'微信',note:'',reminded:false},
@@ -349,6 +350,19 @@ function buildDemo(){
 /* ================= 持久化 ================= */
 var DB;
 function load(){try{var s=localStorage.getItem(KEY);if(s){DB=JSON.parse(s);return}}catch(e){}DB=buildDemo();save()}
+/* 数据迁移：周期账单账期改为从起租月起算（v1.1.1），仅修复未收账单 */
+function migrate(){
+  var changed=false;
+  DB.bills.forEach(function(b){
+    if(!b.cyc||!b.roomId)return;
+    var r=room(b.roomId);
+    if(!r)return;
+    if(b.st!=='unpaid')return;
+    var goodP=cycleStartOf(r,curYm());
+    if(goodP!==b.p){b.p=goodP;b.due=dueOf(r,goodP);if(r.cStart&&b.due<r.cStart)b.due=nextMonthOf(b.due);changed=true}
+  });
+  if(changed)save();
+}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){toast('本地存储失败（浏览器限制）')}}
 /* ================= 主题 ================= */
 function applyTheme(){
@@ -375,17 +389,26 @@ function billNo(p){var c=0;DB.bills.forEach(function(b){if(b.p===p)c++});return 
 function cycleName(c){return {m:'月交',q:'季交',h:'半年交',y:'年交'}[c||'m']||'月交'}
 function cycleMonths(r){return {m:1,q:3,h:6,y:12}[r.payCycle||'m']||1}
 function cycleStartOf(r,p){
-  var c=r.payCycle||'m',y=+p.slice(0,4),m=+p.slice(5,7);
-  if(c==='q'){m=Math.floor((m-1)/3)*3+1}
-  else if(c==='h'){m=m>=7?7:1}
-  else if(c==='y'){m=1}
-  return y+'-'+pad(m);
+  var c=r.payCycle||'m';
+  if(c==='m')return p;
+  var y=+p.slice(0,4),m=+p.slice(5,7);
+  var anchor=r.cStart||p;
+  var ay=+anchor.slice(0,4),am=+anchor.slice(5,7);
+  var off=(y-ay)*12+(m-am);
+  var n={q:3,h:6,y:12}[c]||1;
+  var k=Math.floor(off/n)*n;
+  var tm=am+k,sy=ay;
+  sy=sy+Math.floor((tm-1)/12);
+  tm=((tm-1)%12+12)%12+1;
+  return sy+'-'+pad(tm);
 }
 function cycRange(b){
   var n={q:3,h:6,y:12}[b.cyc]||0;if(!n)return '';
   var m=+b.p.slice(5,7),e=m+n-1;
+  if(e>12)return m+'月~次年'+(e-12)+'月';
   return m+'~'+e+'月';
 }
+function cycShort(b){return b.cyc?({q:'季交',h:'半年',y:'年交'}[b.cyc]||''):''}
 function pLabel(b){return b.cyc?(b.p+'（'+cycRange(b)+'）'):b.p}
 function lateFee(b){
   var st=DB.settings;
@@ -396,6 +419,7 @@ function lateFee(b){
   return Math.min(Math.round(fee*100)/100,Math.round(cap*100)/100);
 }
 function dueOf(r,p){return p+'-'+pad(r.rentDay)}
+function nextMonthOf(d){var a=d.split('-');var y=+a[0],m=+a[1];m++;if(m>12){m=1;y++}return y+'-'+pad(m)+'-'+a[2]}
 function pushHistory(r,note){
   if(!r.tName)return;
   r.history=r.history||[];
@@ -413,7 +437,9 @@ function genBill(rid,p){
     if(rdSum>0)items.push({name:'水费',amt:rdSum});
   }
   var amt=items.reduce(function(s,x){return s+x.amt},0);
-  var b={id:uid(),roomId:rid,p:p,due:dueOf(r,p),items:items,amt:Math.round(amt*100)/100,st:'unpaid',no:billNo(p),reminded:false};
+  var due=dueOf(r,p);
+  if(r.cStart&&due<r.cStart)due=nextMonthOf(due);
+  var b={id:uid(),roomId:rid,p:p,due:due,items:items,amt:Math.round(amt*100)/100,st:'unpaid',no:billNo(p),reminded:false};
   if(n>1)b.cyc=(r.payCycle==='q'?'q':(r.payCycle==='h'?'h':'y'));
   DB.bills.push(b);return b;
 }
@@ -670,6 +696,7 @@ function vMe(){
      '<div class="mi" data-act="openReceipt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v6H4z"/><path d="M6 10v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/><path d="M8 14h3M13 14h3M8 17h2"/></svg><span class="t">收据打印</span><span class="v">押金 · 订金 · 58mm</span></div>'+
      '<div class="mi" data-mv="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M19 12a7 7 0 0 0-.14-1.4l2-1.55-2-3.46-2.35.95A7 7 0 0 0 14 5.1L13.7 2.6h-3.4L10 5.1a7 7 0 0 0-2.5 1.44l-2.36-.95-2 3.46 2 1.55A7 7 0 0 0 5 12c0 .48.05.94.14 1.4l-2 1.55 2 3.46 2.36-.95A7 7 0 0 0 10 18.9l.3 2.5h3.4l.3-2.5a7 7 0 0 0 2.5-1.44l2.36.95 2-3.46-2-1.55c.09-.46.14-.92.14-1.4z"/></svg><span class="t">设置</span><span class="v">主题 · 单价 · 滞纳金 · 收款码</span></div>'+
      '<div class="mi" data-mv="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7" ry="2.5"/><path d="M5 5.5V12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5.5"/><path d="M5 12v6.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V12"/></svg><span class="t">数据管理</span><span class="v">导出 · 导入 · 重置</span></div></div>';
+  h+='<div class="card" style="text-align:center;padding:16px"><div style="font-size:14px;font-weight:800;color:var(--ink)">智租管家 '+APP_VER+'</div><div style="font-size:12px;color:var(--muted);margin-top:4px">单文件本地应用 · 数据仅存本机 · 每次更新版本号递增</div></div>';
   return h;
 }
 function meBack(title){return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><button data-act="meBack" style="border:none;background:none;font-size:22px;color:var(--ink);padding:0;line-height:1">‹</button><h1 style="font-size:19px;font-weight:800">'+title+'</h1></div>'}
@@ -1366,7 +1393,7 @@ function drawBill(b){
   var metaY=184,rowH=64,cPad=36,cH=3*rowH+cPad*2;
   g.fillStyle='#fff';g.strokeStyle='#E7EDF5';g.lineWidth=2;
   rr(g,X1,metaY,W-pad*2,cH,22);g.stroke();
-  var cells=[['小区',p.name],['房间',r.code+' · '+r.type],['租客',r.tName||'—'],['电话',r.tPhone||'—'],['账期',pLabel(b)],['收租日',b.due]];
+  var cells=[['小区',p.name],['房间',r.code+' · '+r.type],['租客',r.tName||'—'],['电话',r.tPhone||'—'],['账期',b.p+(cycShort(b)?' · '+cycShort(b):'')],['收租日',b.due]];
   var lx=[X1+30,X1+356],vx=[X1+165,X1+486];
   cells.forEach(function(cell,i){
     var col=i%2,rowN=Math.floor(i/2);
@@ -1808,7 +1835,7 @@ var _bindQ=function(){
 };
 /* ================= 初始化 ================= */
 document.addEventListener('DOMContentLoaded',function(){
-  load();applyTheme();
+  load();migrate();applyTheme();
   $('#themeBtn').addEventListener('click',cycleTheme);
   $('#sheetMask').addEventListener('click',closeSheet);
   $('#modalMask').addEventListener('click',closeModal);
