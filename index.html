@@ -169,7 +169,7 @@ html[data-theme="dark"] .subtabs button.on{color:#0E1524}
 .mini-bars i.r{background:var(--up-soft)}.mini-bars i.g{background:var(--down-soft)}
 /* ================= 底部导航 ================= */
 .tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--navbg);backdrop-filter:blur(12px);border-top:1px solid var(--line);z-index:50}
-.tabbar .in{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);padding:6px 8px calc(10px + env(safe-area-inset-bottom))}
+.tabbar .in{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);padding:6px 8px calc(10px + env(safe-area-inset-bottom))}
 .tabbar button{background:transparent;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0;color:var(--muted);font-size:11px}
 .tabbar button svg{width:22px;height:22px}
 .tabbar button .ic{width:34px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center}
@@ -261,7 +261,7 @@ html[data-theme="dark"] .seg button.on{color:#0E1524}
 <script>
 /* ================= 工具 ================= */
 var KEY='zzgj_v1';
-var APP_VER='v1.3.2';
+var APP_VER='v1.4.0';
 function pad(n){return n<10?'0'+n:''+n}
 function fmtDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
 function todayStr(){return fmtDate(new Date())}
@@ -372,6 +372,9 @@ function migrate(){
     var end=prevDayOf(periodStart(cs,k+1,n));
     var nr=start+' ~ '+end;
     if(b.range!==nr||b.due!==start){b.range=nr;b.due=start;changed=true}
+  });
+  DB.flows.forEach(function(f){
+    if(f.account==='rent'&&(f.cat==='押金'||f.cat==='押金退还')){f.account='dep';changed=true}
   });
   if(changed)save();
 }
@@ -488,7 +491,7 @@ function periodBillAmt(r){
   if(n>1&&r.periodAmt>0)amt=r.periodAmt;
   return Math.round(amt*100)/100;
 }
-function itemAccount(name){return name==='水费'?'water':(name==='电费'?'elec':(name==='押金'?'rent':'rent'))}
+function itemAccount(name){return name==='水费'?'water':(name==='电费'?'elec':(name==='押金'?'dep':'rent'))}
 function itemCat(name){return name==='水费'?'水费':(name==='电费'?'电费':(name==='押金'?'押金':'租金'))}
 function markPaid(b,method,paidAt,note,lateAmt){
   b.st='paid';b.paidAt=paidAt||todayStr();b.method=method||'现金';b.note=note||'';
@@ -535,17 +538,17 @@ function allInOutRange(f,t){
   return {in:acc.rent.in+acc.elec.in+acc.water.in, out:acc.rent.out+acc.elec.out+acc.water.out};
 }
 /* ================= 路由 / 状态 ================= */
-var state={view:'home',pf:'all',bt:'unpaid',tq:'',meView:null,q:'',sheet:null,modal:null,range:'this',calYm:null};
+var state={view:'home',pf:'all',bt:'unpaid',tq:'',meView:null,q:'',sheet:null,modal:null,range:'this',calYm:null,lgRange:'this',lgAcc:'all'};
 function route(){
   var h=location.hash.replace('#/','');
-  if(['home','props','tenants','bills','me'].indexOf(h)>-1){state.view=h;state.meView=null}
+  if(['home','props','tenants','bills','ledger','me'].indexOf(h)>-1){state.view=h;state.meView=null}
   if(['reports','contracts','settings','data','calendar','deposit'].indexOf(h)>-1){state.view='me';state.meView=h}
   render();
 }
 /* ================= 渲染入口 ================= */
 function render(){
   $('#appDate').textContent=todayStr();
-  var views={home:vHome,props:vProps,tenants:vTenants,bills:vBills,me:vMe};
+  var views={home:vHome,props:vProps,tenants:vTenants,bills:vBills,ledger:vLedger,me:vMe};
   var html=views[state.view]();
   $('#view').innerHTML=html;
   renderTab();
@@ -553,12 +556,13 @@ function render(){
   if(postRender){var pr=postRender;postRender=null;pr()}
 }
 function renderTab(){
-  var navs=[['home','工作台'],['props','房源'],['tenants','租客'],['bills','账单'],['me','我的']];
+  var navs=[['home','工作台'],['props','房源'],['tenants','租客'],['bills','账单'],['ledger','记账'],['me','我的']];
   var ic={
     home:'<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/>',
     props:'<path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/>',
     tenants:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.7-3.6 2.9-5.4 5.5-5.4s4.8 1.8 5.5 5.4"/><circle cx="17.5" cy="9.5" r="2.4"/><path d="M16.8 14.9c2 .6 3.4 2.1 3.9 4.6"/>',
     bills:'<path d="M7 3h10v18l-2.5-1.6L12 21l-2.5-1.6L7 21V3z"/><path d="M10 8h4M10 12h4"/>',
+    ledger:'<path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z"/><path d="M5 4a2 2 0 0 1 2-2h11"/><path d="M9 9h6M9 13h6"/>',
     me:'<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-4.2 3.5-6.3 7-6.3s6.2 2.1 7 6.3"/>'
   };
   $('#tabbar').innerHTML=navs.map(function(n){
@@ -734,7 +738,8 @@ function vMe(){
      '<div class="it"><span>水费专账（'+M+'）</span><b style="color:'+(water.in-water.out>=0?'var(--up)':'var(--down)')+'">'+fmt(water.in-water.out)+'</b><div class="mini-bars"><i class="'+(water.in>water.out?'r':'g')+'"></i></div><span style="font-size:11px">收 '+fmt(water.in)+' · 支 '+fmt(water.out)+'</span></div></div>';
   h+='<div style="height:14px"></div>';
   h+='<div class="menu">'+
-     '<div class="mi" data-mv="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5M12 16V8M16 16v-7"/></svg><span class="t">收支报表</span><span class="v">三本账 · 图表</span></div>'+
+     '<div class="mi" data-v="ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z"/><path d="M5 4a2 2 0 0 1 2-2h11"/><path d="M9 9h6M9 13h6"/></svg><span class="t">记账本</span><span class="v">四账本 · 收支管理</span></div>'+
+     '<div class="mi" data-mv="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5M12 16V8M16 16v-7"/></svg><span class="t">收支报表</span><span class="v">四账本分析 · 图表</span></div>'+
      '<div class="mi" data-mv="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8.5 14.5l2 2 4-4.5"/></svg><span class="t">日历待办</span><span class="v">收租 · 到期 · 预定</span></div>'+
      '<div class="mi" data-mv="contracts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 3h10v18l-2.5-1.6L12 21l-2.5-1.6L7 21V3z"/><path d="M10 8h4"/></svg><span class="t">合同中心</span><span class="v">续租 · 退租</span></div>'+
      '<div class="mi" data-mv="deposit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="14" rx="2.5"/><circle cx="12" cy="13" r="2.4"/><path d="M7 10h2M15 16h2"/></svg><span class="t">押金台账</span><span class="v">应收 · 已退 · 净额</span></div>'+
@@ -872,26 +877,31 @@ function vDeposit(){
   var h=meBack('押金台账');
   var rented=DB.rooms.filter(function(r){return r.tName});
   var hold=Math.round(rented.reduce(function(s,r){return s+(r.deposit||0)},0)*100)/100;
-  var refunded=Math.round(DB.flows.filter(function(f){return f.account==='rent'&&f.cat==='押金退还'&&f.dir==='out'}).reduce(function(s,f){return s+f.amt},0)*100)/100;
+  var refunded=Math.round(DB.flows.filter(function(f){return f.account==='dep'&&f.cat==='押金退还'&&f.dir==='out'}).reduce(function(s,f){return s+f.amt},0)*100)/100;
+  var depIn=Math.round(DB.flows.filter(function(f){return f.account==='dep'&&f.cat==='押金'&&f.dir==='in'}).reduce(function(s,f){return s+f.amt},0)*100)/100;
   var net=Math.round((hold-refunded)*100)/100;
   h+='<div class="fen-card">'+
      '<div class="it"><span>在租应收押金</span><b style="color:var(--up)">'+fmt(hold)+'</b><span style="font-size:11px">在租 '+rented.length+' 间</span></div>'+
-     '<div class="it"><span>已退还押金</span><b style="color:var(--down)">'+fmt(refunded)+'</b><span style="font-size:11px">租金总账·押金退还支出</span></div></div>';
+     '<div class="it"><span>已退还押金</span><b style="color:var(--down)">'+fmt(refunded)+'</b><span style="font-size:11px">押金账本·押金退还支出</span></div></div>';
   h+='<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px"><div><div style="font-size:13.5px;font-weight:700">押金净额（房东持有）</div><div style="font-size:12px;color:var(--muted);margin-top:2px">应收押金 − 已退还，退租结算时按此核对</div></div><b style="font-size:22px;color:'+(net>=0?'var(--up)':'var(--down)')+'">'+fmt(net)+'</b></div>';
+  h+='<div class="card" style="padding:4px 16px"><div style="font-size:13.5px;font-weight:700;padding:10px 0 2px">押金账本收支（已登记流水）</div>'+
+     '<div class="meter-row"><div class="info"><b>押金收取累计</b><span>押金账本收入（签约联动 / 收据入账 / 手动登记）</span></div><b style="color:var(--up)">+'+fmt(depIn)+'</b></div>'+
+     '<div class="meter-row"><div class="info"><b>押金退还累计</b><span>押金账本支出</span></div><b style="color:var(--down)">-'+fmt(refunded)+'</b></div>'+
+     '<div class="meter-row"><div class="info"><b>押金账本结余</b><span>收 − 退（流水口径）</span></div><b style="color:'+(depIn-refunded>=0?'var(--up)':'var(--down)')+'">'+fmt(depIn-refunded)+'</b></div></div>';
   h+='<div class="card" style="padding:4px 16px"><div style="font-size:13.5px;font-weight:700;padding:10px 0 2px">在租房间押金</div>'+
      (rented.length?rented.map(function(r){
        return '<div class="meter-row"><div class="info"><b>'+esc(r.code)+' · '+esc(r.tName)+'</b><span>'+esc(prop(r.prop).name)+'</span></div><b>'+fmt(r.deposit)+'</b></div>';
      }).join(''):'<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px">暂无在租房间</div>')+'</div>';
-  var rf=DB.flows.filter(function(f){return f.account==='rent'&&f.cat==='押金退还'&&f.dir==='out'}).sort(function(a,b){return a.date<b.date?1:-1});
+  var rf=DB.flows.filter(function(f){return f.account==='dep'&&f.cat==='押金退还'&&f.dir==='out'}).sort(function(a,b){return a.date<b.date?1:-1});
   h+='<div class="card" style="padding:4px 16px"><div style="font-size:13.5px;font-weight:700;padding:10px 0 2px">押金退还记录</div>'+
      (rf.length?rf.map(function(f){
        return '<div class="meter-row"><div class="info"><b>'+esc(f.note||'押金退还')+'</b><span>'+esc(f.date)+'</span></div><b style="color:var(--down)">-'+fmt(f.amt)+'</b></div>';
-     }).join(''):'<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px">暂无退还记录（退租时到收支报表记一笔「押金退还」支出）</div>')+'</div>';
-  var ri=DB.flows.filter(function(f){return f.account==='rent'&&f.cat==='押金'&&f.dir==='in'}).sort(function(a,b){return a.date<b.date?1:-1});
-  h+='<div class="card" style="padding:4px 16px"><div style="font-size:13.5px;font-weight:700;padding:10px 0 2px">押金收入记录（收据入账）</div>'+
+     }).join(''):'<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px">暂无退还记录（记账本 → 押金账本记一笔「押金退还」支出）</div>')+'</div>';
+  var ri=DB.flows.filter(function(f){return f.account==='dep'&&f.cat==='押金'&&f.dir==='in'}).sort(function(a,b){return a.date<b.date?1:-1});
+  h+='<div class="card" style="padding:4px 16px"><div style="font-size:13.5px;font-weight:700;padding:10px 0 2px">押金收入记录（签约联动 / 收据入账）</div>'+
      (ri.length?ri.map(function(f){
        return '<div class="meter-row"><div class="info"><b>'+esc(f.note||'押金收入')+'</b><span>'+esc(f.date)+'</span></div><b style="color:var(--up)">+'+fmt(f.amt)+'</b></div>';
-     }).join(''):'<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px">暂无押金收入记录（开具押金收据并勾选「登记入账」后显示）</div>')+'</div>';
+     }).join(''):'<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px">暂无押金收入记录（签约勾选「押金计入首期账单」或开具收据并勾选「登记入账」后显示）</div>')+'</div>';
   return h;
 }
 /* ================= 收支报表 ================= */
@@ -902,31 +912,25 @@ function vReports(){
   var months=rangeMonths(n),from=months[0],to=months[n-1],M=curYm();
   var rLabel=(n===1||from===to)?from:from+' ~ '+to;
   var acc=accountsRange(from,to);
-  var accN={rent:'租金总账',elec:'电费专账',water:'水费专账'};
+  var dep=acc.dep||{in:0,out:0};
+  var tIn=acc.rent.in+acc.elec.in+acc.water.in+dep.in,tOut=acc.rent.out+acc.elec.out+acc.water.out+dep.out;
+  var fCard=function(name,bal,in2,out2){return '<div class="it"><span>'+rLabel+' '+name+'</span><b style="color:'+(bal>=0?'var(--up)':'var(--down)')+'">'+fmt(bal)+'</b><span style="font-size:11px">收 '+fmt(in2)+' · 支 '+fmt(out2)+'</span></div>'};
   h+='<div class="subtabs" id="rangeTabs">'+
      [['this','本月'],['3m','近3月'],['6m','近6月'],['12m','近12月']].map(function(f){
        return '<button class="'+(state.range===f[0]?'on':'')+'" data-range="'+f[0]+'">'+f[1]+'</button>';
      }).join('')+'</div>';
   h+='<div class="fen-card">'+
-     '<div class="it"><span>'+rLabel+' 租金总账</span><b style="color:'+(acc.rent.in-acc.rent.out>=0?'var(--up)':'var(--down)')+'">'+fmt(acc.rent.in-acc.rent.out)+'</b><span style="font-size:11px">收 '+fmt(acc.rent.in)+' · 支 '+fmt(acc.rent.out)+'</span></div>'+
-     '<div class="it"><span>'+rLabel+' 电费专账</span><b style="color:'+(acc.elec.in-acc.elec.out>=0?'var(--up)':'var(--down)')+'">'+fmt(acc.elec.in-acc.elec.out)+'</b><span style="font-size:11px">收 '+fmt(acc.elec.in)+' · 支 '+fmt(acc.elec.out)+'</span></div>'+
-     '<div class="it"><span>'+rLabel+' 水费专账</span><b style="color:'+(acc.water.in-acc.water.out>=0?'var(--up)':'var(--down)')+'">'+fmt(acc.water.in-acc.water.out)+'</b><span style="font-size:11px">收 '+fmt(acc.water.in)+' · 支 '+fmt(acc.water.out)+'</span></div>'+
-     '<div class="it"><span>'+rLabel+' 合计</span><b style="color:'+(acc.rent.in+acc.elec.in+acc.water.in-acc.rent.out-acc.elec.out-acc.water.out>=0?'var(--up)':'var(--down)')+'">'+fmt(acc.rent.in+acc.elec.in+acc.water.in-acc.rent.out-acc.elec.out-acc.water.out)+'</b><span style="font-size:11px">总收 '+fmt(acc.rent.in+acc.elec.in+acc.water.in)+' · 总支 '+fmt(acc.rent.out+acc.elec.out+acc.water.out)+'</span></div></div>';
+     fCard('租金总账',acc.rent.in-acc.rent.out,acc.rent.in,acc.rent.out)+
+     fCard('电费专账',acc.elec.in-acc.elec.out,acc.elec.in,acc.elec.out)+
+     fCard('水费专账',acc.water.in-acc.water.out,acc.water.in,acc.water.out)+
+     fCard('押金账本',dep.in-dep.out,dep.in,dep.out)+
+     '<div class="it"><span>'+rLabel+' 四账本合计</span><b style="color:'+(tIn-tOut>=0?'var(--up)':'var(--down)')+'">'+fmt(tIn-tOut)+'</b><span style="font-size:11px">总收 '+fmt(tIn)+' · 总支 '+fmt(tOut)+'</span></div></div>';
   h+='<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px"><div><div style="font-size:13.5px;font-weight:700">当前空置率</div><div style="font-size:12px;color:var(--muted);margin-top:2px">空置 '+DB.rooms.filter(function(r){return rStatus(r)==='vacant'}).length+' 间 · 已预定 '+DB.rooms.filter(function(r){return rStatus(r)==='reserved'}).length+' 间 · 共 '+DB.rooms.length+' 间</div></div><b style="font-size:24px;color:var(--primary)">'+(DB.rooms.length?Math.round(DB.rooms.filter(function(r){return rStatus(r)==='vacant'}).length/DB.rooms.length*100):0)+'%</b></div>';
   h+='<div class="card"><h2>抄表记录对比</h2><div style="height:180px" id="meterChart"><div style="padding:30px 0;text-align:center;color:var(--muted);font-size:12.5px">图表加载中…</div></div><div id="meterList" style="margin-top:2px"></div></div>';
   h+='<div class="card" style="height:230px" id="barChart"><div style="padding:40px 0;text-align:center;color:var(--muted)">图表加载中…</div></div>';
   h+='<div class="card" style="height:210px" id="pieChart"><div style="padding:40px 0;text-align:center;color:var(--muted)">图表加载中…</div></div>';
-  h+='<div style="display:flex;gap:8px;align-items:center;margin:2px 2px 10px"><span style="font-size:14px;font-weight:700">收支明细（'+rLabel+'）</span><select id="fltAcc" style="margin-left:auto;padding:6px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font-size:13px">'+
-     '<option value="all">全部账本</option><option value="rent">租金总账</option><option value="elec">电费专账</option><option value="water">水费专账</option></select></div>';
-  h+='<div class="card" style="padding:4px 16px" id="flowList"></div>';
-  h+='<div class="quick" style="grid-template-columns:1fr 1fr;margin-top:14px">'+
-     '<button data-act="openIncome"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>记一笔收入</button>'+
-     '<button data-act="openExpense"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg>记一笔支出</button></div>';
+  h+='<div style="font-size:12px;color:var(--muted);margin:14px 2px 0">流水记账与四账本收支管理请到「记账本」页。</div>';
   postRender=function(){
-    var flt=function(){return DB.flows.filter(function(f){var m=f.date.slice(0,7);return inRange(m,from,to)&&($('#fltAcc').value==='all'||f.account===$('#fltAcc').value)}).sort(function(a,b){return a.date<b.date?1:-1})};
-    var draw=function(){renderFlows(flt())};
-    $('#fltAcc').addEventListener('change',draw);
-    draw();
     try{drawBar(months);drawPie(acc,rLabel);drawMeterChart()}catch(e){
       var bc=$('#barChart'),pc=$('#pieChart');
       if(bc)bc.innerHTML='<div style="padding:30px 0;text-align:center;color:var(--muted);font-size:12.5px">图表库加载失败，请联网后刷新</div>';
@@ -938,14 +942,53 @@ function vReports(){
 function renderFlows(flows){
   var el=$('#flowList');if(!el)return;
   if(!flows.length){el.innerHTML='<div style="padding:26px 0;text-align:center;color:var(--muted);font-size:13px">暂无流水</div>';return}
-  var accN={rent:'租金',elec:'电费',water:'水费'};
   el.innerHTML=flows.map(function(f){
     var col=f.dir==='in'?'var(--up)':'var(--down)';
     var sign=f.dir==='in'?'+':'-';
     return '<div class="bill-row"><div class="room-tag" style="background:'+(f.dir==='in'?'var(--up-soft)':'var(--down-soft)')+';color:'+col+'">'+(f.dir==='in'?'收':'支')+'</div>'+
-      '<div class="info"><b>'+esc(f.cat)+' <span style="font-weight:400;color:var(--muted);font-size:12px">'+esc(accN[f.account]||'')+'</span></b><span>'+esc(f.date)+' · '+esc(f.note||'')+'</span></div>'+
-      '<div class="amt"><b style="color:'+col+'">'+sign+fmt(f.amt)+'</b></div></div>';
+      '<div class="info"><b>'+esc(f.cat)+' <span style="font-weight:400;color:var(--muted);font-size:12px">'+esc(accName(f.account))+'</span></b><span>'+esc(f.date)+' · '+esc(f.note||'')+'</span></div>'+
+      '<div class="amt"><b style="color:'+col+'">'+sign+fmt(f.amt)+'</b></div>'+
+      '<button data-act="delFlow" data-fid="'+f.id+'" style="align-self:center;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:12px">删</button></div>';
   }).join('');
+}
+/* ================= 记账本（四账本） ================= */
+function vLedger(){
+  var M=curYm(),all=accounts(),cur=accounts(M);
+  var depA=all.dep||{in:0,out:0},depC=cur.dep||{in:0,out:0};
+  var h='<div style="display:flex;align-items:center;gap:10px;margin:2px 2px 10px"><h1 style="font-size:19px;font-weight:800;margin:0">记账本</h1><span style="font-size:12px;color:var(--muted)">四账本 · 收支管理</span></div>';
+  var books=[
+    ['租金总账','房租 · 物业费 · 维修',all.rent.in-all.rent.out,cur.rent.in,cur.rent.out],
+    ['电费专账','预付费充值 · 总电费',all.elec.in-all.elec.out,cur.elec.in,cur.elec.out],
+    ['水费专账','预付费充值 · 总水费',all.water.in-all.water.out,cur.water.in,cur.water.out],
+    ['押金账本','押金收取 · 押金退还',depA.in-depA.out,depC.in,depC.out]
+  ];
+  h+='<div class="fen-card">'+books.map(function(bk){
+    return '<div class="it"><span>'+bk[0]+'</span><b style="color:'+(bk[2]>=0?'var(--up)':'var(--down)')+';font-size:19px">'+fmt(bk[2])+'</b><span style="font-size:11px">'+bk[1]+'</span><span style="font-size:11px">本月收 '+fmt(bk[3])+' · 支 '+fmt(bk[4])+'</span></div>';
+  }).join('')+'</div>';
+  h+='<div class="quick" style="grid-template-columns:1fr 1fr;margin:12px 0 16px">'+
+     '<button data-act="openIncome"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>记一笔收入</button>'+
+     '<button data-act="openExpense"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg>记一笔支出</button></div>';
+  var nMap={this:1,'3m':3,'6m':6,'12m':12};
+  var n=nMap[state.lgRange]||1,months=rangeMonths(n);
+  var rLabel=(n===1)?curYm():months[0]+' ~ '+months[n-1];
+  h+='<div class="subtabs" id="lgTabs">'+
+     [['this','本月'],['3m','近3月'],['6m','近6月'],['12m','近12月']].map(function(f){
+       return '<button class="'+(state.lgRange===f[0]?'on':'')+'" data-lg-range="'+f[0]+'">'+f[1]+'</button>';
+     }).join('')+'</div>';
+  h+='<div style="display:flex;gap:8px;align-items:center;margin:10px 2px 8px"><span style="font-size:14px;font-weight:700">收支明细（'+rLabel+'）</span>'+
+     '<select id="lgAcc" style="margin-left:auto;padding:6px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font-size:13px">'+
+     '<option value="all">全部账本</option><option value="rent">租金总账</option><option value="elec">电费专账</option><option value="water">水费专账</option><option value="dep">押金账本</option></select></div>';
+  h+='<div class="card" style="padding:4px 16px" id="flowList"></div>';
+  h+='<div style="font-size:12px;color:var(--muted);margin:10px 2px 0">流水右侧「删」可移除错误记录；分析图表在「我的 → 收支报表」。</div>';
+  postRender=function(){
+    var n2=nMap[state.lgRange]||1,m2=rangeMonths(n2),f0=m2[0],t0=m2[n2-1];
+    var flt=function(){return DB.flows.filter(function(f){var m=f.date.slice(0,7);return inRange(m,f0,t0)&&(state.lgAcc==='all'||f.account===state.lgAcc)}).sort(function(a,b){return a.date<b.date?1:-1})};
+    var draw=function(){renderFlows(flt())};
+    var la=$('#lgAcc');
+    if(la)la.addEventListener('change',function(){state.lgAcc=la.value;draw()});
+    draw();
+  };
+  return h;
 }
 /* ================= 弹层 ================= */
 function openSheet(html){$('#sheetBody').innerHTML=html;$('#sheetMask').classList.add('show');$('#sheet').classList.add('show')}
@@ -1183,15 +1226,18 @@ function rechargeModal(rid){
 function catOptions(acc){
   if(acc==='elec')return ['总电费','其他'];
   if(acc==='water')return ['总水费','其他'];
-  return ['物业费','维修','押金退还','其他'];
+  if(acc==='dep')return ['押金退还'];
+  return ['物业费','维修','其他'];
 }
+function accName(a){return ({rent:'租金总账',elec:'电费专账',water:'水费专账',dep:'押金账本'})[a]||a}
 function expenseModal(acc){
   acc=acc||'rent';
   openModal('记一笔支出',
     '<div class="form-row"><label>账本</label><select id="exAcc">'+
     '<option value="rent" '+(acc==='rent'?'selected':'')+'>租金总账</option>'+
     '<option value="elec" '+(acc==='elec'?'selected':'')+'>电费专账</option>'+
-    '<option value="water" '+(acc==='water'?'selected':'')+'>水费专账</option></select></div>'+
+    '<option value="water" '+(acc==='water'?'selected':'')+'>水费专账</option>'+
+    '<option value="dep" '+(acc==='dep'?'selected':'')+'>押金账本</option></select></div>'+
     '<div class="form-row"><label>分类</label><select id="exCat">'+catOptions(acc).map(function(c){return '<option>'+c+'</option>'}).join('')+'</select></div>'+
     '<div class="form-row" id="exRoomRow" style="display:none"><label>关联房间</label><select id="exRoom"><option value="">— 选择房间 —</option>'+DB.rooms.map(function(r2){var p2=prop(r2.prop),label=p2.name+' '+r2.code+(r2.tName?'（'+r2.tName+'）':'（空置）');return '<option value="'+r2.id+'">'+esc(label)+'</option>'}).join('')+'</select></div>'+
     '<div class="form-row"><label>金额（元）</label><input id="exAmt" type="number" step="0.01" min="0" placeholder="0.00"></div>'+
@@ -1201,10 +1247,10 @@ function expenseModal(acc){
   $('#exAcc').addEventListener('change',function(){
     var a=$('#exAcc').value;
     $('#exCat').innerHTML=catOptions(a).map(function(c){return '<option>'+c+'</option>'}).join('');
-    $('#exRoomRow').style.display=(a==='rent'&&$('#exCat').value==='押金退还')?'':'none';
+    $('#exRoomRow').style.display=(a==='dep')?'':'none';
   });
   $('#exCat').addEventListener('change',function(){
-    $('#exRoomRow').style.display=($('#exAcc').value==='rent'&&$('#exCat').value==='押金退还')?'':'none';
+    $('#exRoomRow').style.display=($('#exAcc').value==='dep')?'':'none';
   });
   $('#exRoom').addEventListener('change',function(){
     var rid=$('#exRoom').value;
@@ -1218,31 +1264,44 @@ function expenseModal(acc){
     if(isNaN(amt)||amt<=0){toast('请填写有效金额');return}
     var account=$('#exAcc').value,cat=$('#exCat').value,date=$('#exDate').value||todayStr(),note=$('#exNote').value.trim();
     var rid=$('#exRoom').value||'';
-    if(cat==='押金退还'&&!rid){toast('请选择关联房间');return}
-    if(cat==='押金退还'&&!note){var r2=room(rid),p2=prop(r2.prop);note=p2.name+' '+r2.code+' '+(r2.tName||'')+' 押金退还'}
+    if(account==='dep'&&!rid){toast('请选择关联房间');return}
+    if(account==='dep'&&!note){var r2=room(rid),p2=prop(r2.prop);note=p2.name+' '+r2.code+' '+(r2.tName||'')+' 押金退还'}
     addExpense(account,cat,amt,date,note,rid);save();closeModal();render();
-    toast('已记支出 '+fmt(amt)+' → '+({rent:'租金总账',elec:'电费专账',water:'水费专账'})[account]);
+    toast('已记支出 '+fmt(amt)+' → '+accName(account));
   });
 }
 function incomeModal(){
   openModal('记一笔收入',
     '<div class="form-row"><label>账本</label><select id="inAcc">'+
-    '<option value="rent">租金总账</option><option value="elec">电费专账</option><option value="water">水费专账</option></select></div>'+
-    '<div class="form-row"><label>分类</label><select id="inCat"><option>押金</option><option>其他</option></select></div>'+
+    '<option value="rent">租金总账</option><option value="elec">电费专账</option><option value="water">水费专账</option><option value="dep">押金账本</option></select></div>'+
+    '<div class="form-row"><label>分类</label><select id="inCat"><option>租金</option><option>其他</option></select></div>'+
+    '<div class="form-row" id="inRoomRow" style="display:none"><label>关联房间</label><select id="inRoom"><option value="">— 选择房间 —</option>'+DB.rooms.map(function(r2){var p2=prop(r2.prop),label=p2.name+' '+r2.code+(r2.tName?'（'+r2.tName+'）':'（空置）');return '<option value="'+r2.id+'">'+esc(label)+'</option>'}).join('')+'</select></div>'+
     '<div class="form-row"><label>金额（元）</label><input id="inAmt" type="number" step="0.01" min="0" placeholder="0.00"></div>'+
     '<div class="form-row"><label>日期</label><input id="inDate" type="date" value="'+todayStr()+'"></div>'+
-    '<div class="form-row"><label>备注（可选）</label><input id="inNote" placeholder="如：退租结算押金"></div>'+
+    '<div class="form-row"><label>备注（可选）</label><input id="inNote" placeholder="如：押金收取"></div>'+
     '<div class="acts"><button class="btn-ghost" data-act="closeModal">取消</button><button class="btn-pri" id="inOk">保存收入</button></div>');
   $('#inAcc').addEventListener('change',function(){
     var a=$('#inAcc').value;
-    $('#inCat').innerHTML=(a==='rent'?'<option>押金</option><option>其他</option>':'<option>水电充值</option><option>其他</option>');
+    $('#inCat').innerHTML=(a==='rent'?'<option>租金</option><option>其他</option>':(a==='dep'?'<option>押金收取</option><option>其他</option>':'<option>水电充值</option><option>其他</option>'));
+    $('#inRoomRow').style.display=(a==='dep')?'':'none';
+  });
+  $('#inRoom').addEventListener('change',function(){
+    var rid=$('#inRoom').value;
+    if(rid&&!$('#inNote').value.trim()){
+      var r2=room(rid),p2=prop(r2.prop);
+      $('#inNote').value=p2.name+' '+r2.code+' '+r2.tName+' 押金收取';
+    }
   });
   $('#inOk').addEventListener('click',function(){
     var amt=parseFloat($('#inAmt').value);
     if(isNaN(amt)||amt<=0){toast('请填写有效金额');return}
     var account=$('#inAcc').value,cat=$('#inCat').value,date=$('#inDate').value||todayStr(),note=$('#inNote').value.trim();
-    addIncome(account,cat,amt,date,note);save();closeModal();render();
-    toast('已记收入 '+fmt(amt));
+    var rid=$('#inRoom').value||'';
+    if(account==='dep'&&!rid){toast('请选择关联房间');return}
+    if(account==='dep'&&cat==='押金收取')cat='押金';
+    if(account==='dep'&&!note){var r2=room(rid),p2=prop(r2.prop);note=p2.name+' '+r2.code+' '+(r2.tName||'')+' 押金收取'}
+    addIncome(account,cat,amt,date,note,rid);save();closeModal();render();
+    toast('已记收入 '+fmt(amt)+' → '+accName(account));
   });
 }
 /* ================= 房源 / 租客 ================= */
@@ -1362,7 +1421,7 @@ function quitModal(rid){
   var unAmt=un.reduce(function(s,b){return s+b.amt},0);
   confirmModal('退租 · '+r.code,
     '确定 '+esc(r.tName)+' 退租？'+(un.length?'<br><br>该房间还有 <b style="color:var(--up)">'+un.length+' 笔未收账单（'+fmt(unAmt)+'）</b>，退租后仍保留在未收列表，可继续催收。':'')+
-    '<br><br>退租后房间转为空置，押金退还请到收支报表记一笔「押金退还」支出。','退租',function(){
+    '<br><br>退租后房间转为空置，押金退还请到「记账本 → 押金账本」记一笔押金退还支出。','退租',function(){
       pushHistory(r,'退租');
       r.tName='';r.tPhone='';r.tShare=1;r.cStart='';r.cEnd='';
       save();closeSheet();render();toast('已退租，房间转为空置');
@@ -1657,7 +1716,7 @@ function openReceipt(){
     '<div class="form-row"><label>金额（元）</label><input id="rc2Amt" type="number" step="0.01" min="0"></div></div>'+
     '<div class="form-grid"><div class="form-row"><label>收款日期</label><input id="rc2Date" type="date" value="'+todayStr()+'"></div>'+
     '<div class="form-row"><label>备注（可选）</label><input id="rc2Note" placeholder="如：3个月押金"></div></div>'+
-    '<div class="form-row"><label style="display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);cursor:pointer"><input id="rc2Book" type="checkbox" checked style="width:18px;height:18px">打印后登记入账（租金总账·押金收入；押金收据自动同步房间押金）</label></div>'+
+    '<div class="form-row"><label style="display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);cursor:pointer"><input id="rc2Book" type="checkbox" checked style="width:18px;height:18px">打印后登记入账（押金账本·押金收入；押金收据自动同步房间押金）</label></div>'+
     '<div class="acts"><button class="btn-ghost" data-act="closeModal">取消</button><button class="btn-pri" id="rc2Ok">打印 58mm 收据</button></div>');
   $('#rc2Ok').addEventListener('click',function(){
     var rid=$('#rc2Who').value,r=rid?room(rid):null;
@@ -1666,7 +1725,7 @@ function openReceipt(){
     if(isNaN(amt)||amt<=0){toast('请填写有效金额');return}
     var no='SJ'+date.replace(/-/g,'')+'-'+('000'+Math.floor(Math.random()*1000)).slice(-3);
     if($('#rc2Book').checked){
-      addIncome('rent','押金',amt,date,(r.code+' '+(note||cat)+'收据 '+no));
+      addIncome('dep','押金',amt,date,(r.code+' '+(note||cat)+'收据 '+no));
       if(cat==='押金'&&r.tName){r.deposit=amt}
       save();
     }
@@ -1789,10 +1848,10 @@ function drawBar(monthsArr){
 function drawPie(acc,rLabel){
   acc=acc||accounts(curYm());
   var C=chartColors();
-  var data=[{name:'租金收入',value:Math.round(acc.rent.in)},{name:'电费收入',value:Math.round(acc.elec.in)},{name:'水费收入',value:Math.round(acc.water.in)}].filter(function(x){return x.value>0});
+  var data=[{name:'租金收入',value:Math.round(acc.rent.in)},{name:'电费收入',value:Math.round(acc.elec.in)},{name:'水费收入',value:Math.round(acc.water.in)},{name:'押金收入',value:Math.round((acc.dep||{}).in||0)}].filter(function(x){return x.value>0});
   var el=$('#pieChart');if(!el)return;el.innerHTML='';
   var ch=echarts.init(el);
-  ch.setOption({color:[C.primary,C.warn,C.down],tooltip:{trigger:'item',triggerOn:'click',renderMode:'richText',confine:true},legend:{bottom:0,textStyle:{color:C.sub},itemWidth:12,itemHeight:12},series:[{type:'pie',radius:['42%','68%'],center:['50%','43%'],data:data,label:{color:C.ink,fontSize:12},labelLine:{lineStyle:{color:C.sub}},itemStyle:{borderRadius:6}}]});
+  ch.setOption({color:[C.primary,C.warn,C.down,C.up],tooltip:{trigger:'item',triggerOn:'click',renderMode:'richText',confine:true},legend:{bottom:0,textStyle:{color:C.sub},itemWidth:12,itemHeight:12},series:[{type:'pie',radius:['42%','68%'],center:['50%','43%'],data:data,label:{color:C.ink,fontSize:12},labelLine:{lineStyle:{color:C.sub}},itemStyle:{borderRadius:6}}]});
 }
 /* ================= 数据管理 ================= */
 function exportData(){
@@ -1811,7 +1870,7 @@ function exportCsv(filename,rows){
   toast('已导出 '+filename);
 }
 function exportFlowsCsv(){
-  var accN={rent:'租金总账',elec:'电费专账',water:'水费专账'};
+  var accN={rent:'租金总账',elec:'电费专账',water:'水费专账',dep:'押金账本'};
   var rows=[['日期','账本','收/支','分类','金额','备注']];
   DB.flows.slice().sort(function(a,b){return a.date<b.date?1:-1}).forEach(function(f){
     rows.push([f.date,accN[f.account]||f.account,f.dir==='in'?'收':'支',f.cat,Number(f.amt).toFixed(2),f.note||'']);
@@ -1859,7 +1918,7 @@ function clearData(){
 }
 /* ================= 全局事件 ================= */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-v],[data-pf],[data-bt],[data-mv],[data-act],[data-room],[data-open-room],[data-open-bill],[data-theme-set],[data-rid],[data-bid],[data-range],[data-late-set],[data-cal-nav],[data-cal-day]');
+  var t=e.target.closest('[data-v],[data-pf],[data-bt],[data-mv],[data-act],[data-room],[data-open-room],[data-open-bill],[data-theme-set],[data-rid],[data-bid],[data-range],[data-lg-range],[data-late-set],[data-cal-nav],[data-cal-day]');
   if(!t)return;
   var v=t.getAttribute('data-v');
   if(v){location.hash='#/'+v;return}
@@ -1873,6 +1932,8 @@ document.addEventListener('click',function(e){
   if(ts){DB.settings.theme=ts;save();applyTheme();render();return}
   var rg=t.getAttribute('data-range');
   if(rg){state.range=rg;render();return}
+  var lgr=t.getAttribute('data-lg-range');
+  if(lgr){state.lgRange=lgr;render();return}
   var ls=t.getAttribute('data-late-set');
   if(ls){DB.settings.lateOn=(ls==='on');save();render();return}
   var cnav=t.getAttribute('data-cal-nav');
@@ -1955,6 +2016,11 @@ document.addEventListener('click',function(e){
       if(isNaN(rd)||rd<0||rd>30){toast('请输入 0-30 之间的天数');break}
       DB.settings.remindDays=rd;save();render();toast('已保存');break;
     case 'meBack':state.meView=null;render();break;
+    case 'delFlow':
+      var dfid=t.getAttribute('data-fid');
+      confirmModal('删除流水','确定删除该笔收支流水？删除后账本统计同步更新。','删除',function(){
+        DB.flows=DB.flows.filter(function(x){return x.id!==dfid});save();render();toast('流水已删除');
+      });break;
     case 'exportData':exportData();break;
     case 'importData':importData();break;
     case 'resetDemo':resetDemo();break;
