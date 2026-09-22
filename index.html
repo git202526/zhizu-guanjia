@@ -261,7 +261,7 @@ html[data-theme="dark"] .seg button.on{color:#0E1524}
 <script>
 /* ================= 工具 ================= */
 var KEY='zzgj_v1';
-var APP_VER='v1.3.1';
+var APP_VER='v1.3.2';
 function pad(n){return n<10?'0'+n:''+n}
 function fmtDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
 function todayStr(){return fmtDate(new Date())}
@@ -1030,6 +1030,13 @@ function openBill(bid){
   h+='<div class="kv"><span>账期</span><b>'+esc(pLabel(b))+'</b></div>';
   h+='<div class="kv"><span>账单日</span><b>'+esc(b.due)+'</b></div>';
   b.items.forEach(function(it){h+='<div class="kv"><span>'+esc(it.name)+'</span><b>'+fmt(it.amt)+'</b></div>'});
+  var stdRent=Math.round((r.rent||0)*cycleMonths(r)*100)/100;
+  var actRent=periodBillAmt(r);
+  var disc=Math.round((stdRent-actRent)*100)/100;
+  if(disc!==0&&b.cyc){
+    h+='<div class="kv"><span>标准周期租金</span><b style="color:var(--muted)">'+fmt(stdRent)+'</b></div>';
+    h+='<div class="kv"><span>'+(disc>0?'优惠让利':'价格上浮')+'</span><b style="color:'+(disc>0?'var(--down)':'var(--up)')+';font-weight:800">'+(disc>0?'−':'+')+fmt(Math.abs(disc))+'</b></div>';
+  }
   h+='<div class="kv"><span>应收合计</span><b style="color:var(--up);font-size:18px">'+fmt(b.amt)+'</b></div>';
   if(b.st==='unpaid'&&lateFee(b)>0){
     h+='<div class="kv"><span>滞纳金（逾期'+overdueDays(b)+'天）</span><b style="color:var(--up)">+'+fmt(lateFee(b))+'</b></div>';
@@ -1497,8 +1504,12 @@ function cnMoney(n){
 function rr(g,x,y,w,h,r){g.beginPath();if(g.roundRect){g.roundRect(x,y,w,h,r)}else{g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}g.fill()}
 function drawBill(b){
   var r=room(b.roomId),p=prop(r.prop);
+  var stdRent=Math.round((r.rent||0)*cycleMonths(r)*100)/100;
+  var actRent=periodBillAmt(r);
+  var disc=Math.round((stdRent-actRent)*100)/100;
+  var hasDisc=disc!==0;
   var W=750,pad=44,X1=pad,X2=W-pad;
-  var nItems=b.items.length;
+  var nItems=b.items.length+(hasDisc?1:0);
   var H=1060+nItems*62;
   var c=document.createElement('canvas');c.width=W;c.height=H;
   var g=c.getContext('2d');
@@ -1534,10 +1545,20 @@ function drawBill(b){
   y=hdrY+42;
   b.items.forEach(function(it){
     y+=62;
-    g.textAlign='left';g.fillStyle='#3A4557';g.font='28px sans-serif';g.fillText(it.name,X1+30,y);
+    var nm=it.name;
+    if(it.name==='租金')nm='应收租金'+(b.cyc?'（'+cycleName(r.payCycle)+'）':'');
+    g.textAlign='left';g.fillStyle='#3A4557';g.font=(it.name==='租金'?'bold 28px':'28px')+' sans-serif';g.fillText(nm,X1+30,y);
     g.textAlign='right';g.fillStyle='#1B2537';g.font='bold 29px sans-serif';g.fillText('¥'+Number(it.amt).toFixed(2),X2-30,y);
     g.strokeStyle='#EEF1F6';g.lineWidth=1.5;g.beginPath();g.moveTo(X1+30,y+24);g.lineTo(X2-30,y+24);g.stroke();
   });
+  if(hasDisc){
+    y+=62;
+    var discName=(disc>0?'优惠让利':'价格上浮')+'（标准 '+fmt(stdRent)+'）';
+    var discVal=(disc>0?'−':'+')+fmt(Math.abs(disc));
+    g.textAlign='left';g.fillStyle='#98A1B3';g.font='26px sans-serif';g.fillText(discName,X1+30,y);
+    g.textAlign='right';g.fillStyle=disc>0?'#12A150':'#E5484D';g.font='bold 29px sans-serif';g.fillText(discVal,X2-30,y);
+    g.strokeStyle='#EEF1F6';g.lineWidth=1.5;g.beginPath();g.moveTo(X1+30,y+24);g.lineTo(X2-30,y+24);g.stroke();
+  }
   y+=46;
   /* 应收合计 */
   var fee=lateFee(b),od=overdueDays(b),stS=DB.settings;
@@ -1681,13 +1702,17 @@ function print58(bid){
   }else{
     if((b.latePaid||0)>0){feeRow='<tr><td>滞纳金</td><td style="text-align:right">+'+Number(b.latePaid).toFixed(2)+'</td></tr>';finalLabel='实收金额';finalAmt=b.amt+b.latePaid}
   }
+  var stdRent=Math.round((r.rent||0)*cycleMonths(r)*100)/100;
+  var actRent=periodBillAmt(r);
+  var disc=Math.round((stdRent-actRent)*100)/100;
+  var discRow=(disc!==0&&b.cyc)?'<tr><td>'+(disc>0?'优惠让利':'价格上浮')+'（标准 '+stdRent.toFixed(2)+'）</td><td style="text-align:right">'+(disc>0?'−':'+')+Math.abs(disc).toFixed(2)+'</td></tr>':'';
   var h='<div class="r58"><div class="c"><h2>智租管家</h2><div>电子账单 · 收款凭证</div></div>'+
     '<div class="sep"></div>'+
     '<div>编号：'+(b.no||'—')+'</div>'+
     '<div>小区：'+esc(p.name)+'</div><div>房间：'+esc(r.code)+' '+esc(r.type)+'</div><div>租客：'+esc(r.tName||'—')+'</div><div>电话：'+esc(r.tPhone||'—')+'</div>'+
     '<div>账期：'+pLabel(b)+'　账单日：'+b.due+'</div>'+
     '<div class="sep"></div>'+
-    '<table>'+b.items.map(function(it){return '<tr><td>'+esc(it.name)+'</td><td style="text-align:right">'+Number(it.amt).toFixed(2)+'</td></tr>'}).join('')+'</table>'+
+    '<table>'+b.items.map(function(it){return '<tr><td>'+(it.name==='租金'&&disc!==0?'应收租金（'+cycleName(r.payCycle)+'）':esc(it.name))+'</td><td style="text-align:right">'+Number(it.amt).toFixed(2)+'</td></tr>'}).join('')+discRow+'</table>'+
     '<div class="sep"></div>'+
     '<table><tr><td>应收合计</td><td style="text-align:right">'+Number(b.amt).toFixed(2)+'</td></tr>'+feeRow+
     '<tr><td><b>'+finalLabel+'</b></td><td style="text-align:right"><b>'+Number(finalAmt).toFixed(2)+'</b></td></tr></table>'+
