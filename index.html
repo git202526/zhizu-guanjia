@@ -275,16 +275,18 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 function uid(){return 'id'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36)}
 /* ================= 示例数据（相对当前日期生成，保证口径自洽） ================= */
 function buildDemo(){
-  var T=todayStr(), M=curYm(), PM=prevYm(M);
+  var T=todayStr(), M=curYm(), PM=prevYm(M), QM=M.slice(0,4)+'-'+pad(Math.floor((+M.slice(5,7)-1)/3)*3+1);
   var props=[{id:'p1',name:'阳光花园',addr:'3栋 · 集中式'},{id:'p2',name:'城市之光',addr:'分散式'}];
-  var mk=function(prop,code,type,area,rent,dep,tn,ph,cs,ce,rentDay,mW,wLast){
-    return {id:code,prop:prop,code:code,type:type,area:area,rent:rent,deposit:dep,rentDay:rentDay,
+  var mk=function(prop,code,type,area,rent,dep,tn,ph,cs,ce,rentDay,mW,wLast,cyc){
+    var o={id:code,prop:prop,code:code,type:type,area:area,rent:rent,deposit:dep,rentDay:rentDay,
       tName:tn,tPhone:ph,tShare:1,cStart:cs,cEnd:ce,mW:mW||'meter',mE:'prepaid',wLast:wLast||0};
+    if(cyc)o.payCycle=cyc;
+    return o;
   };
   var rooms=[
     mk('p1','101','一室一厅','45㎡',2200,2200,'张三','13800000001','2026-03-01','2027-02-28',1,'meter',12),
     mk('p1','102','两室一厅','60㎡',2800,2800,'李四','13900000002','2026-01-15','2027-01-14',15,'meter',86),
-    mk('p1','103','单间','25㎡',1500,1500,'王五','13700000003','2026-09-01','2026-12-31',25,'meter',0),
+    mk('p1','103','单间','25㎡',1500,1500,'王五','13700000003','2026-09-01','2026-12-31',25,'meter',0,'q'),
     mk('p1','104','单间','25㎡',1500,1500,'','','','',10,'meter',0),
     mk('p1','105','一室一厅','40㎡',2000,2000,'陈七','13600000005','2025-09-10','2026-09-09',10,'meter',31),
     mk('p2','201','一室','30㎡',1800,1800,'周八','13500000008','2026-03-01','2026-10-01',20,'meter',7),
@@ -297,7 +299,7 @@ function buildDemo(){
     {id:uid(),roomId:'105',p:M,due:addDays(T,-12),items:[{name:'租金',amt:2000},{name:'水费',amt:22.5}],amt:2022.5,st:'unpaid',reminded:false},
     {id:uid(),roomId:'102',p:M,due:addDays(T,-7),items:[{name:'租金',amt:2800},{name:'水费',amt:36}],amt:2836,st:'unpaid',reminded:false},
     {id:uid(),roomId:'201',p:M,due:addDays(T,-2),items:[{name:'租金',amt:1800},{name:'水费',amt:9}],amt:1809,st:'unpaid',reminded:false},
-    {id:uid(),roomId:'103',p:M,due:addDays(T,3),items:[{name:'租金',amt:1500}],amt:1500,st:'paid',paidAt:addDays(T,-1),method:'微信',note:'',reminded:false},
+    {id:uid(),roomId:'103',p:QM,due:QM+'-25',items:[{name:'租金',amt:4500}],amt:4500,st:'paid',paidAt:addDays(T,-4),method:'微信',note:'',reminded:false,cyc:'q'},
     {id:uid(),roomId:'203',p:M,due:addDays(T,6),items:[{name:'租金',amt:3500},{name:'水费',amt:22.5}],amt:3522.5,st:'paid',paidAt:addDays(T,-2),method:'银行卡',note:'',reminded:false},
     {id:uid(),roomId:'101',p:PM,due:PM+'-01',items:[{name:'租金',amt:2200}],amt:2200,st:'paid',paidAt:PM+'-02',method:'微信',note:'',reminded:false},
     {id:uid(),roomId:'102',p:PM,due:PM+'-15',items:[{name:'租金',amt:2800},{name:'水费',amt:33}],amt:2833,st:'paid',paidAt:PM+'-16',method:'微信',note:'',reminded:false},
@@ -369,6 +371,22 @@ function rStatus(r){
 }
 function overdueDays(b){var d=daysTo(b.due);return d<0?-d:0}
 function billNo(p){var c=0;DB.bills.forEach(function(b){if(b.p===p)c++});return 'NO.'+p.replace('-','')+'-'+('000'+(c+1)).slice(-3)}
+/* ================= 交租周期 ================= */
+function cycleName(c){return {m:'月交',q:'季交',h:'半年交',y:'年交'}[c||'m']||'月交'}
+function cycleMonths(r){return {m:1,q:3,h:6,y:12}[r.payCycle||'m']||1}
+function cycleStartOf(r,p){
+  var c=r.payCycle||'m',y=+p.slice(0,4),m=+p.slice(5,7);
+  if(c==='q'){m=Math.floor((m-1)/3)*3+1}
+  else if(c==='h'){m=m>=7?7:1}
+  else if(c==='y'){m=1}
+  return y+'-'+pad(m);
+}
+function cycRange(b){
+  var n={q:3,h:6,y:12}[b.cyc]||0;if(!n)return '';
+  var m=+b.p.slice(5,7),e=m+n-1;
+  return m+'~'+e+'月';
+}
+function pLabel(b){return b.cyc?(b.p+'（'+cycRange(b)+'）'):b.p}
 function lateFee(b){
   var st=DB.settings;
   if(!st.lateOn||b.lateOff||b.st!=='unpaid')return 0;
@@ -385,12 +403,18 @@ function pushHistory(r,note){
 }
 function genBill(rid,p){
   var r=room(rid);if(!r||!r.tName)return null;
-  var ex=billsOf(rid).filter(function(b){return b.p===p&&b.st==='unpaid'})[0];
+  p=cycleStartOf(r,p);
+  var ex=billsOf(rid).filter(function(b){return b.p===p})[0];
   if(ex)return ex;
-  var items=[{name:'租金',amt:r.rent}];
-  if(r.mW==='meter'){var rd=readingOf(rid,p);if(rd){items.push({name:'水费',amt:rd.wFee})}}
+  var n=cycleMonths(r);
+  var items=[{name:'租金',amt:Math.round(r.rent*n*100)/100}];
+  if(r.mW==='meter'){
+    var rdSum=Math.round(DB.readings.filter(function(x){return x.roomId===rid&&!x.note&&x.p>=p&&x.p<=curYm()}).reduce(function(s,x){return s+(x.wFee||0)},0)*100)/100;
+    if(rdSum>0)items.push({name:'水费',amt:rdSum});
+  }
   var amt=items.reduce(function(s,x){return s+x.amt},0);
   var b={id:uid(),roomId:rid,p:p,due:dueOf(r,p),items:items,amt:Math.round(amt*100)/100,st:'unpaid',no:billNo(p),reminded:false};
+  if(n>1)b.cyc=(r.payCycle==='q'?'q':(r.payCycle==='h'?'h':'y'));
   DB.bills.push(b);return b;
 }
 function itemAccount(name){return name==='水费'?'water':(name==='电费'?'elec':'rent')}
@@ -496,7 +520,7 @@ function billRow(b,inline){
     acts='<div class="row-actions"><button data-act="photo" data-bid="'+b.id+'">照片账单</button><button data-act="print58" data-bid="'+b.id+'">58mm</button><button data-act="revert" data-bid="'+b.id+'">撤销到账</button></div>';
   }
   return '<div class="bill-row" data-open-bill="'+b.id+'">'+roomMini(r)+
-    '<div class="info"><b>'+esc(r.tName||'空置')+' · '+esc(r.code)+'</b><span>'+esc(b.no||'')+' · 收租日 '+esc(b.due)+'</span>'+billChip(b)+feeChip+'</div>'+
+    '<div class="info"><b>'+esc(r.tName||'空置')+' · '+esc(r.code)+'</b><span>'+esc(pLabel(b))+' · 收租日 '+esc(b.due.slice(5))+'</span>'+billChip(b)+feeChip+'</div>'+
     '<div class="amt"><b>'+fmt(b.amt)+'</b></div>'+acts+'</div>';
 }
 /* ================= 工作台 ================= */
@@ -878,7 +902,7 @@ function openRoom(rid){
   h+='<div style="margin:6px 0 4px"><span class="mode '+(r.mW==='meter'?'meter':'prepaid')+'">水表·'+(r.mW==='meter'?'抄表':'预付费')+'</span><span class="mode '+(r.mE==='meter'?'meter':'prepaid')+'">电表·'+(r.mE==='meter'?'抄表':'预付费')+'</span>'+stChip(r)+'</div>';
   h+='<div class="kv"><span>户型 / 面积</span><b>'+esc(r.type)+' '+esc(r.area)+'</b></div>';
   h+='<div class="kv"><span>租金 / 押金</span><b>'+fmt(r.rent)+' / '+fmt(r.deposit)+'</b></div>';
-  h+='<div class="kv"><span>收租日</span><b>每月 '+r.rentDay+' 日</b></div>';
+  h+='<div class="kv"><span>收租日</span><b>每月 '+r.rentDay+' 日 · '+cycleName(r.payCycle)+'</b></div>';
   if(r.tName){
     h+='<div class="kv"><span>租客</span><b>'+esc(r.tName)+'（'+r.tShare+'人）</b></div>';
     h+='<div class="kv"><span>电话</span><b>'+esc(r.tPhone)+'</b></div>';
@@ -901,11 +925,11 @@ function openRoom(rid){
   }
   h+='<div style="font-size:13.5px;font-weight:700;margin:14px 0 4px">最近账单</div>';
   if(bs.length){bs.forEach(function(b){
-    h+='<div class="bill-row" data-open-bill="'+b.id+'" style="padding:8px 0"><div class="info"><b>'+esc(b.p)+'</b><span>'+esc(b.due)+'</span></div><div class="amt"><b>'+fmt(b.amt)+'</b>'+billChip(b)+'</div></div>';
+    h+='<div class="bill-row" data-open-bill="'+b.id+'" style="padding:8px 0"><div class="info"><b>'+esc(pLabel(b))+'</b><span>'+esc(b.due)+'</span></div><div class="amt"><b>'+fmt(b.amt)+'</b>'+billChip(b)+'</div></div>';
   })}else{h+='<div style="font-size:12.5px;color:var(--muted);padding:6px 0">暂无账单</div>'}
   h+='<div class="acts">';
   if(r.tName){
-    h+='<button class="btn-pri" data-act="genBill" data-rid="'+rid+'">生成本月账单</button>';
+    h+='<button class="btn-pri" data-act="genBill" data-rid="'+rid+'">生成当期账单</button>';
     h+='<button class="btn-ghost" data-act="renew" data-rid="'+rid+'">续租</button>';
     if(r.mW==='meter'){h+='<button class="btn-ghost" data-act="meterIn" data-rid="'+rid+'">抄表</button><button class="btn-ghost" data-act="changeMeter" data-rid="'+rid+'">换表</button>'}
     h+='<button class="btn-ghost" data-act="recharge" data-rid="'+rid+'">电费充值</button>';
@@ -929,7 +953,7 @@ function openBill(bid){
   h+='<div class="hd">'+esc(p.name)+' '+esc(r.code)+' 账单</div><div class="bd">';
   h+='<div class="kv"><span>租客</span><b>'+esc(r.tName||'-')+'</b></div>';
   h+='<div class="kv"><span>业务编号</span><b>'+esc(b.no||'—')+'</b></div>';
-  h+='<div class="kv"><span>账期</span><b>'+esc(b.p)+'</b></div>';
+  h+='<div class="kv"><span>账期</span><b>'+esc(pLabel(b))+'</b></div>';
   h+='<div class="kv"><span>收租日</span><b>'+esc(b.due)+'</b></div>';
   b.items.forEach(function(it){h+='<div class="kv"><span>'+esc(it.name)+'</span><b>'+fmt(it.amt)+'</b></div>'});
   h+='<div class="kv"><span>应收合计</span><b style="color:var(--up);font-size:18px">'+fmt(b.amt)+'</b></div>';
@@ -1145,7 +1169,8 @@ function signModal(rid){
     '<div class="form-grid"><div class="form-row"><label>租金（元/月）</label><input id="sRent" type="number" step="0.01" min="0" value="'+r.rent+'"></div>'+
     '<div class="form-row"><label>押金（元）</label><input id="sDep" type="number" step="0.01" min="0" value="'+r.deposit+'"></div></div>'+
     '<div class="form-grid"><div class="form-row"><label>收租日</label><input id="sDay" type="number" min="1" max="28" value="'+r.rentDay+'"></div>'+
-    '<div class="form-row"><label>水表计费</label><select id="sW"><option value="meter">抄表</option><option value="prepaid">预付费</option></select></div></div>'+
+    '<div class="form-row"><label>交租周期</label><select id="sCycle"><option value="m">月交（每月一收）</option><option value="q">季交（每季一收）</option><option value="h">半年交（每半年一收）</option><option value="y">年交（每年一收）</option></select></div></div>'+
+    '<div class="form-row"><label>水表计费</label><select id="sW"><option value="meter">抄表</option><option value="prepaid">预付费</option></select></div>'+
     '<div class="acts"><button class="btn-ghost" data-act="closeModal">取消</button><button class="btn-pri" id="sOk">签约</button></div>');
   $('#sOk').addEventListener('click',function(){
     var name=$('#sName').value.trim(),phone=$('#sPhone').value.trim();
@@ -1157,10 +1182,11 @@ function signModal(rid){
     r.tName=name;r.tPhone=phone;r.tShare=parseInt($('#sShare').value)||1;
     r.cStart=start;r.cEnd=end;r.rent=rent;r.deposit=parseFloat($('#sDep').value)||0;
     r.rentDay=Math.min(28,Math.max(1,parseInt($('#sDay').value)||1));
+    r.payCycle=$('#sCycle').value||'m';
     r.mW=$('#sW').value;r.wLast=r.wLast||0;r.reserve=null;
     genBill(rid,curYm());
     save();closeModal();closeSheet();render();
-    toast('签约成功，已生成 '+curYm()+' 账单');
+    toast('签约成功，已生成当期账单（'+cycleName(r.payCycle)+'）');
   });
 }
 function renewModal(rid){
@@ -1198,7 +1224,8 @@ function editRoomModal(rid){
     '<div class="form-row"><label>面积</label><input id="eArea" value="'+esc(r.area)+'"></div></div>'+
     '<div class="form-grid"><div class="form-row"><label>租金（元/月）</label><input id="eRent" type="number" step="0.01" min="0" value="'+r.rent+'"></div>'+
     '<div class="form-row"><label>押金（元）</label><input id="eDep" type="number" step="0.01" min="0" value="'+r.deposit+'"></div></div>'+
-    '<div class="form-row"><label>收租日</label><input id="eDay" type="number" min="1" max="28" value="'+r.rentDay+'"></div>'+
+    '<div class="form-grid"><div class="form-row"><label>收租日</label><input id="eDay" type="number" min="1" max="28" value="'+r.rentDay+'"></div>'+
+    '<div class="form-row"><label>交租周期</label><select id="eCycle"><option value="m" '+(r.payCycle==='m'?'selected':'')+'>月交</option><option value="q" '+(r.payCycle==='q'?'selected':'')+'>季交</option><option value="h" '+(r.payCycle==='h'?'selected':'')+'>半年交</option><option value="y" '+(r.payCycle==='y'?'selected':'')+'>年交</option></select></div></div>'+
     '<div class="form-row"><label>租金年递增率（%，可选）</label><input id="eInc" type="number" step="0.5" min="0" value="'+(r.inc||0)+'" placeholder="续租时自动按此比例涨租"></div>'+
     '<div class="acts"><button class="btn-ghost" data-act="closeModal">取消</button><button class="btn-pri" id="eOk">保存</button></div>');
   $('#eOk').addEventListener('click',function(){
@@ -1207,6 +1234,7 @@ function editRoomModal(rid){
     r.type=$('#eType').value.trim()||r.type;r.area=$('#eArea').value.trim()||r.area;
     r.rent=rent;r.deposit=parseFloat($('#eDep').value)||0;
     r.rentDay=Math.min(28,Math.max(1,parseInt($('#eDay').value)||1));
+    r.payCycle=$('#eCycle').value||'m';
     r.inc=parseFloat($('#eInc').value)||0;
     save();closeModal();closeSheet();render();toast('已保存');
   });
@@ -1283,7 +1311,7 @@ function delRoom(rid){
 function genAllBills(){
   var n=0;DB.rooms.forEach(function(r){if(r.tName){var b=genBill(r.id,curYm());if(b)n++}});
   save();render();
-  toast(n?('已生成 '+n+' 笔本月账单'):'本月账单已全部存在');
+  toast(n?('已生成 '+n+' 笔当期账单'):'当期账单已全部存在');
 }
 /* ================= 照片账单（Canvas） ================= */
 function cnMoney(n){
@@ -1338,7 +1366,7 @@ function drawBill(b){
   var metaY=184,rowH=64,cPad=36,cH=3*rowH+cPad*2;
   g.fillStyle='#fff';g.strokeStyle='#E7EDF5';g.lineWidth=2;
   rr(g,X1,metaY,W-pad*2,cH,22);g.stroke();
-  var cells=[['小区',p.name],['房间',r.code+' · '+r.type],['租客',r.tName||'—'],['电话',r.tPhone||'—'],['账期',b.p],['收租日',b.due]];
+  var cells=[['小区',p.name],['房间',r.code+' · '+r.type],['租客',r.tName||'—'],['电话',r.tPhone||'—'],['账期',pLabel(b)],['收租日',b.due]];
   var lx=[X1+30,X1+356],vx=[X1+165,X1+486];
   cells.forEach(function(cell,i){
     var col=i%2,rowN=Math.floor(i/2);
@@ -1509,7 +1537,7 @@ function print58(bid){
     '<div class="sep"></div>'+
     '<div>编号：'+(b.no||'—')+'</div>'+
     '<div>小区：'+esc(p.name)+'</div><div>房间：'+esc(r.code)+' '+esc(r.type)+'</div><div>租客：'+esc(r.tName||'—')+'</div><div>电话：'+esc(r.tPhone||'—')+'</div>'+
-    '<div>账期：'+b.p+'　收租日：'+b.due+'</div>'+
+    '<div>账期：'+pLabel(b)+'　收租日：'+b.due+'</div>'+
     '<div class="sep"></div>'+
     '<table>'+b.items.map(function(it){return '<tr><td>'+esc(it.name)+'</td><td style="text-align:right">'+Number(it.amt).toFixed(2)+'</td></tr>'}).join('')+'</table>'+
     '<div class="sep"></div>'+
@@ -1619,11 +1647,11 @@ function exportFlowsCsv(){
 }
 function exportRoomsCsv(){
   var stN={rented:'已租',vacant:'空置',reserved:'已预定',overdue:'逾期',expiring:'将到期'};
-  var rows=[['小区','房号','户型','当前租客','电话','租期起','租期止','状态','月租金','押金','年递增率%','历史租客']];
+  var rows=[['小区','房号','户型','当前租客','电话','租期起','租期止','状态','月租金','押金','交租周期','年递增率%','历史租客']];
   DB.rooms.forEach(function(r){
     var p=prop(r.prop);
     var hist=(r.history||[]).map(function(x){return x.name+'('+x.cStart+'~'+x.cEnd+')'}).join('；');
-    rows.push([p?p.name:'',r.code,r.type,r.tName||'',r.tPhone||'',r.cStart||'',r.cEnd||'',stN[rStatus(r)]||rStatus(r),r.rent,r.deposit||0,r.inc||0,hist]);
+    rows.push([p?p.name:'',r.code,r.type,r.tName||'',r.tPhone||'',r.cStart||'',r.cEnd||'',stN[rStatus(r)]||rStatus(r),r.rent,r.deposit||0,cycleName(r.payCycle),r.inc||0,hist]);
   });
   exportCsv('租客台账-'+todayStr()+'.csv',rows);
 }
