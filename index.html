@@ -583,6 +583,7 @@ function vBills(){
       if(b.st==='unpaid'&&daysTo(b.due)<0){ovAmt+=b.amt;ovN++}
     });
     h+='<div class="sum2"><div class="item"><span>本月应收</span><b style="color:var(--up)">'+fmt(sum)+'</b></div><div class="item"><span>逾期未收 · '+ovN+'笔</span><b style="color:var(--up)">'+fmt(ovAmt)+'</b></div></div>';
+    h+='<button class="mini-btn" data-act="copyUrgeList" style="width:100%;padding:11px 0;margin-bottom:12px">一键复制全部未收账单催收清单</button>';
     h+='<div class="card" style="padding:4px 16px">'+(rows.length?rows.map(function(b){return billRow(b,true)}).join(''):'<div style="padding:26px 0;text-align:center;color:var(--muted);font-size:13px">全部收齐，暂无未收账单</div>')+'</div>';
     h+='<button class="btn-full" data-act="genAll" style="width:100%;padding:13px 0;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14.5px;font-weight:700">生成本月全部账单</button>';
   }else{
@@ -698,6 +699,8 @@ function vData(){
   var h=meBack('数据管理');
   h+='<div class="card"><h2>本地数据</h2><div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">全部数据保存在当前浏览器本地（localStorage），不会上传服务器。换设备或清缓存前请先导出备份。</div>'+
      '<div class="row-actions" style="margin:0"><button class="pri" data-act="exportData">导出 JSON 备份</button><button data-act="importData">导入备份</button><button data-act="resetDemo">恢复示例数据</button><button data-act="clearData">清空数据</button></div></div>';
+  h+='<div class="card"><h2>导出表格（CSV）</h2><div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">CSV 可用 Excel / WPS 直接打开；租客台账含历史租客。</div>'+
+     '<div class="row-actions" style="margin:0"><button class="pri" data-act="exportFlowsCsv">收支流水 CSV</button><button data-act="exportRoomsCsv">租客台账 CSV</button></div></div>';
   h+='<div class="card"><h2>数据统计</h2>'+
      '<div class="kv"><span>小区</span><b>'+DB.props.length+'</b></div>'+
      '<div class="kv"><span>房间</span><b>'+DB.rooms.length+'</b></div>'+
@@ -788,6 +791,11 @@ function vDeposit(){
      (rf.length?rf.map(function(f){
        return '<div class="meter-row"><div class="info"><b>'+esc(f.note||'押金退还')+'</b><span>'+esc(f.date)+'</span></div><b style="color:var(--down)">-'+fmt(f.amt)+'</b></div>';
      }).join(''):'<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px">暂无退还记录（退租时到收支报表记一笔「押金退还」支出）</div>')+'</div>';
+  var ri=DB.flows.filter(function(f){return f.account==='rent'&&f.cat==='押金'&&f.dir==='in'}).sort(function(a,b){return a.date<b.date?1:-1});
+  h+='<div class="card" style="padding:4px 16px"><div style="font-size:13.5px;font-weight:700;padding:10px 0 2px">押金收入记录（收据入账）</div>'+
+     (ri.length?ri.map(function(f){
+       return '<div class="meter-row"><div class="info"><b>'+esc(f.note||'押金收入')+'</b><span>'+esc(f.date)+'</span></div><b style="color:var(--up)">+'+fmt(f.amt)+'</b></div>';
+     }).join(''):'<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px">暂无押金收入记录（开具押金收据并勾选「登记入账」后显示）</div>')+'</div>';
   return h;
 }
 /* ================= 收支报表 ================= */
@@ -1443,25 +1451,33 @@ function openQR(bid){
     '</div>'+
     '<div class="acts"><button class="btn-ghost" data-act="closeModal">关闭</button>'+(b.st==='unpaid'?'<button class="btn-pri" data-act="pay" data-bid="'+b.id+'">标记到账</button>':'<button class="btn-ghost" data-act="photo" data-bid="'+b.id+'">照片账单</button>')+'</div>');
 }
-/* ================= 收据打印（押金/订金，58mm） ================= */
+/* ================= 收据打印（押金/订金，58mm，可登记入账） ================= */
 function openReceipt(){
-  var opts=DB.rooms.filter(function(r){return r.tName}).map(function(r){return '<option value="'+esc(r.tName)+'">'+esc(r.tName)+' · '+esc(r.code)+'</option>'}).join('');
+  var opts=DB.rooms.filter(function(r){return r.tName}).map(function(r){return '<option value="'+r.id+'">'+esc(r.tName)+' · '+esc(r.code)+'</option>'}).join('');
   openModal('开具收据（押金/订金）',
-    '<div class="form-row"><label>缴付人（租客）</label><select id="rc2Who"><option value="">— 选择在租租客 —</option>'+opts+'</select></div>'+
+    '<div class="form-row"><label>关联房间（在租）</label><select id="rc2Who"><option value="">— 选择房间 —</option>'+opts+'</select></div>'+
     '<div class="form-grid"><div class="form-row"><label>项目</label><select id="rc2Cat"><option>押金</option><option>订金</option><option>租金</option><option>水电费</option><option>其他</option></select></div>'+
     '<div class="form-row"><label>金额（元）</label><input id="rc2Amt" type="number" step="0.01" min="0"></div></div>'+
     '<div class="form-grid"><div class="form-row"><label>收款日期</label><input id="rc2Date" type="date" value="'+todayStr()+'"></div>'+
     '<div class="form-row"><label>备注（可选）</label><input id="rc2Note" placeholder="如：3个月押金"></div></div>'+
+    '<div class="form-row"><label style="display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);cursor:pointer"><input id="rc2Book" type="checkbox" checked style="width:18px;height:18px">打印后登记入账（租金总账·押金收入；押金收据自动同步房间押金）</label></div>'+
     '<div class="acts"><button class="btn-ghost" data-act="closeModal">取消</button><button class="btn-pri" id="rc2Ok">打印 58mm 收据</button></div>');
   $('#rc2Ok').addEventListener('click',function(){
-    var who=$('#rc2Who').value,cat=$('#rc2Cat').value,amt=parseFloat($('#rc2Amt').value),date=$('#rc2Date').value||todayStr(),note=$('#rc2Note').value.trim();
-    if(!who){toast('请选择缴付人');return}
+    var rid=$('#rc2Who').value,r=rid?room(rid):null;
+    var who=r?r.tName:'',cat=$('#rc2Cat').value,amt=parseFloat($('#rc2Amt').value),date=$('#rc2Date').value||todayStr(),note=$('#rc2Note').value.trim();
+    if(!who){toast('请选择关联房间');return}
     if(isNaN(amt)||amt<=0){toast('请填写有效金额');return}
     var no='SJ'+date.replace(/-/g,'')+'-'+('000'+Math.floor(Math.random()*1000)).slice(-3);
+    if($('#rc2Book').checked){
+      addIncome('rent','押金',amt,date,(r.code+' '+(note||cat)+'收据 '+no));
+      if(cat==='押金'&&r.tName){r.deposit=amt}
+      save();
+    }
     var h='<div class="r58"><div class="c"><h2>智租管家</h2><div>收 据</div><div>RECEIPT</div></div>'+
       '<div class="sep"></div>'+
       '<div>编号：'+no+'</div>'+
       '<div>缴付人：'+esc(who)+'</div>'+
+      '<div>房间：'+esc(r.code)+'</div>'+
       '<div>项目：'+esc(cat)+(note?'（'+esc(note)+'）':'')+'</div>'+
       '<div>日期：'+date+'</div>'+
       '<div class="sep"></div>'+
@@ -1523,6 +1539,21 @@ function urge(bid){
     closeModal();toast('已复制催收文案');
   });
 }
+/* ================= 批量催收清单 ================= */
+function copyUrgeList(){
+  var M=curYm();
+  var rows=DB.bills.filter(function(b){return b.st==='unpaid'}).sort(function(a,b){return a.due<b.due?-1:1});
+  if(!rows.length){toast('没有未收账单');return}
+  var lines=['【智租管家】'+M+' 催收清单：'];
+  rows.forEach(function(b){
+    var r=room(b.roomId),od=overdueDays(b),fee=lateFee(b);
+    var tail=od>0?'（逾期 '+od+' 天）':'（'+b.due+' 到期）';
+    lines.push(r.code+' '+r.tName+'：应收 '+Number(b.amt).toFixed(2)+' 元'+(fee>0?'，含滞纳金应付 '+Number(b.amt+fee).toFixed(2)+' 元':'')+tail);
+  });
+  lines.push('请各位租客尽快缴付，谢谢配合！');
+  copyText(lines.join('\n'));
+  toast('已复制 '+rows.length+' 笔催收清单');
+}
 /* ================= 图表 ================= */
 function chartColors(){
   var dark=document.documentElement.getAttribute('data-theme')==='dark';
@@ -1569,6 +1600,32 @@ function exportData(){
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(function(){URL.revokeObjectURL(a.href)},3000);
   toast('已导出备份');
+}
+function exportCsv(filename,rows){
+  var csv='\ufeff'+rows.map(function(r){return r.map(function(c){var s=String(c==null?'':c);return'"'+s.replace(/"/g,'""')+'"'}).join(',')}).join('\r\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(a.href)},3000);
+  toast('已导出 '+filename);
+}
+function exportFlowsCsv(){
+  var accN={rent:'租金总账',elec:'电费专账',water:'水费专账'};
+  var rows=[['日期','账本','收/支','分类','金额','备注']];
+  DB.flows.slice().sort(function(a,b){return a.date<b.date?1:-1}).forEach(function(f){
+    rows.push([f.date,accN[f.account]||f.account,f.dir==='in'?'收':'支',f.cat,Number(f.amt).toFixed(2),f.note||'']);
+  });
+  exportCsv('收支流水-'+todayStr()+'.csv',rows);
+}
+function exportRoomsCsv(){
+  var stN={rented:'已租',vacant:'空置',reserved:'已预定',overdue:'逾期',expiring:'将到期'};
+  var rows=[['小区','房号','户型','当前租客','电话','租期起','租期止','状态','月租金','押金','年递增率%','历史租客']];
+  DB.rooms.forEach(function(r){
+    var p=prop(r.prop);
+    var hist=(r.history||[]).map(function(x){return x.name+'('+x.cStart+'~'+x.cEnd+')'}).join('；');
+    rows.push([p?p.name:'',r.code,r.type,r.tName||'',r.tPhone||'',r.cStart||'',r.cEnd||'',stN[rStatus(r)]||rStatus(r),r.rent,r.deposit||0,r.inc||0,hist]);
+  });
+  exportCsv('租客台账-'+todayStr()+'.csv',rows);
 }
 function importData(){
   var inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';
@@ -1700,6 +1757,9 @@ document.addEventListener('click',function(e){
     case 'importData':importData();break;
     case 'resetDemo':resetDemo();break;
     case 'clearData':clearData();break;
+    case 'exportFlowsCsv':exportFlowsCsv();break;
+    case 'exportRoomsCsv':exportRoomsCsv();break;
+    case 'copyUrgeList':copyUrgeList();break;
     case 'openWaterRate':state.meView='settings';render();break;
     case 'openElecRate':state.meView='settings';render();break;
   }
