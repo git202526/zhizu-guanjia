@@ -378,6 +378,11 @@ function lateFee(b){
   return Math.min(Math.round(fee*100)/100,Math.round(cap*100)/100);
 }
 function dueOf(r,p){return p+'-'+pad(r.rentDay)}
+function pushHistory(r,note){
+  if(!r.tName)return;
+  r.history=r.history||[];
+  r.history.unshift({name:r.tName,phone:r.tPhone,cStart:r.cStart,cEnd:r.cEnd,note:note,date:todayStr()});
+}
 function genBill(rid,p){
   var r=room(rid);if(!r||!r.tName)return null;
   var ex=billsOf(rid).filter(function(b){return b.p===p&&b.st==='unpaid'})[0];
@@ -439,7 +444,7 @@ var state={view:'home',pf:'all',bt:'unpaid',tq:'',meView:null,q:'',sheet:null,mo
 function route(){
   var h=location.hash.replace('#/','');
   if(['home','props','tenants','bills','me'].indexOf(h)>-1){state.view=h;state.meView=null}
-  if(['reports','contracts','settings','data','calendar'].indexOf(h)>-1){state.view='me';state.meView=h}
+  if(['reports','contracts','settings','data','calendar','deposit'].indexOf(h)>-1){state.view='me';state.meView=h}
   render();
 }
 /* ================= 渲染入口 ================= */
@@ -622,6 +627,7 @@ function vMe(){
   if(state.meView==='settings')return vSettings();
   if(state.meView==='data')return vData();
   if(state.meView==='calendar')return vCalendar();
+  if(state.meView==='deposit')return vDeposit();
   var M=curYm(),acc=accounts(M),v=DB.rooms.filter(function(r){return rStatus(r)==='vacant'}).length;
   var h='';
   h+='<div class="card" style="display:flex;align-items:center;gap:14px"><div class="avatar" style="width:52px;height:52px;font-size:20px">房</div><div><div style="font-size:17px;font-weight:800">房东账号</div><div style="font-size:12.5px;color:var(--muted)">'+DB.rooms.length+' 间房 · 在租 '+ (DB.rooms.length-v) +' 间 · 空置 '+v+' 间</div></div></div>';
@@ -635,6 +641,7 @@ function vMe(){
      '<div class="mi" data-mv="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5M12 16V8M16 16v-7"/></svg><span class="t">收支报表</span><span class="v">三本账 · 图表</span></div>'+
      '<div class="mi" data-mv="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8.5 14.5l2 2 4-4.5"/></svg><span class="t">日历待办</span><span class="v">收租 · 到期 · 预定</span></div>'+
      '<div class="mi" data-mv="contracts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 3h10v18l-2.5-1.6L12 21l-2.5-1.6L7 21V3z"/><path d="M10 8h4"/></svg><span class="t">合同中心</span><span class="v">续租 · 退租</span></div>'+
+     '<div class="mi" data-mv="deposit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="14" rx="2.5"/><circle cx="12" cy="13" r="2.4"/><path d="M7 10h2M15 16h2"/></svg><span class="t">押金台账</span><span class="v">应收 · 已退 · 净额</span></div>'+
      '<div class="mi" data-act="openReceipt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v6H4z"/><path d="M6 10v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/><path d="M8 14h3M13 14h3M8 17h2"/></svg><span class="t">收据打印</span><span class="v">押金 · 订金 · 58mm</span></div>'+
      '<div class="mi" data-mv="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M19 12a7 7 0 0 0-.14-1.4l2-1.55-2-3.46-2.35.95A7 7 0 0 0 14 5.1L13.7 2.6h-3.4L10 5.1a7 7 0 0 0-2.5 1.44l-2.36-.95-2 3.46 2 1.55A7 7 0 0 0 5 12c0 .48.05.94.14 1.4l-2 1.55 2 3.46 2.36-.95A7 7 0 0 0 10 18.9l.3 2.5h3.4l.3-2.5a7 7 0 0 0 2.5-1.44l2.36.95 2-3.46-2-1.55c.09-.46.14-.92.14-1.4z"/></svg><span class="t">设置</span><span class="v">主题 · 单价 · 滞纳金 · 收款码</span></div>'+
      '<div class="mi" data-mv="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7" ry="2.5"/><path d="M5 5.5V12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5.5"/><path d="M5 12v6.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V12"/></svg><span class="t">数据管理</span><span class="v">导出 · 导入 · 重置</span></div></div>';
@@ -761,6 +768,28 @@ function calendarDayModal(ds){
   rsv.forEach(function(r){body+='<div class="kv"><span>预定</span><b>'+esc(r.code)+' '+esc(r.reserve.name||'')+'</b></div>'});
   openModal(ds+' 待办',body+'<div class="acts"><button class="btn-pri" data-act="closeModal">知道了</button></div>');
 }
+/* ================= 押金台账 ================= */
+function vDeposit(){
+  var h=meBack('押金台账');
+  var rented=DB.rooms.filter(function(r){return r.tName});
+  var hold=Math.round(rented.reduce(function(s,r){return s+(r.deposit||0)},0)*100)/100;
+  var refunded=Math.round(DB.flows.filter(function(f){return f.account==='rent'&&f.cat==='押金退还'&&f.dir==='out'}).reduce(function(s,f){return s+f.amt},0)*100)/100;
+  var net=Math.round((hold-refunded)*100)/100;
+  h+='<div class="fen-card">'+
+     '<div class="it"><span>在租应收押金</span><b style="color:var(--up)">'+fmt(hold)+'</b><span style="font-size:11px">在租 '+rented.length+' 间</span></div>'+
+     '<div class="it"><span>已退还押金</span><b style="color:var(--down)">'+fmt(refunded)+'</b><span style="font-size:11px">租金总账·押金退还支出</span></div></div>';
+  h+='<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px"><div><div style="font-size:13.5px;font-weight:700">押金净额（房东持有）</div><div style="font-size:12px;color:var(--muted);margin-top:2px">应收押金 − 已退还，退租结算时按此核对</div></div><b style="font-size:22px;color:'+(net>=0?'var(--up)':'var(--down)')+'">'+fmt(net)+'</b></div>';
+  h+='<div class="card" style="padding:4px 16px"><div style="font-size:13.5px;font-weight:700;padding:10px 0 2px">在租房间押金</div>'+
+     (rented.length?rented.map(function(r){
+       return '<div class="meter-row"><div class="info"><b>'+esc(r.code)+' · '+esc(r.tName)+'</b><span>'+esc(prop(r.prop).name)+'</span></div><b>'+fmt(r.deposit)+'</b></div>';
+     }).join(''):'<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px">暂无在租房间</div>')+'</div>';
+  var rf=DB.flows.filter(function(f){return f.account==='rent'&&f.cat==='押金退还'&&f.dir==='out'}).sort(function(a,b){return a.date<b.date?1:-1});
+  h+='<div class="card" style="padding:4px 16px"><div style="font-size:13.5px;font-weight:700;padding:10px 0 2px">押金退还记录</div>'+
+     (rf.length?rf.map(function(f){
+       return '<div class="meter-row"><div class="info"><b>'+esc(f.note||'押金退还')+'</b><span>'+esc(f.date)+'</span></div><b style="color:var(--down)">-'+fmt(f.amt)+'</b></div>';
+     }).join(''):'<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px">暂无退还记录（退租时到收支报表记一笔「押金退还」支出）</div>')+'</div>';
+  return h;
+}
 /* ================= 收支报表 ================= */
 function vReports(){
   var h=meBack('收支报表');
@@ -856,6 +885,12 @@ function openRoom(rid){
     h+='<div class="kv"><span>状态</span><b>空置待租</b></div>';
   }
   var bs=billsOf(rid).slice(-3).reverse();
+  if(r.history&&r.history.length){
+    h+='<div style="font-size:13.5px;font-weight:700;margin:14px 0 4px">历史租客</div>';
+    r.history.forEach(function(x){
+      h+='<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--line)"><span style="flex:0 0 auto"><b>'+esc(x.name)+'</b>'+(x.phone?' · '+esc(x.phone):'')+'</span><span style="color:var(--muted);text-align:right">'+esc(x.cStart||'?')+' ~ '+esc(x.cEnd||'?')+' · '+esc(x.note||'')+'</span></div>';
+    });
+  }
   h+='<div style="font-size:13.5px;font-weight:700;margin:14px 0 4px">最近账单</div>';
   if(bs.length){bs.forEach(function(b){
     h+='<div class="bill-row" data-open-bill="'+b.id+'" style="padding:8px 0"><div class="info"><b>'+esc(b.p)+'</b><span>'+esc(b.due)+'</span></div><div class="amt"><b>'+fmt(b.amt)+'</b>'+billChip(b)+'</div></div>';
@@ -1143,6 +1178,7 @@ function quitModal(rid){
   confirmModal('退租 · '+r.code,
     '确定 '+esc(r.tName)+' 退租？'+(un.length?'<br><br>该房间还有 <b style="color:var(--up)">'+un.length+' 笔未收账单（'+fmt(unAmt)+'）</b>，退租后仍保留在未收列表，可继续催收。':'')+
     '<br><br>退租后房间转为空置，押金退还请到收支报表记一笔「押金退还」支出。','退租',function(){
+      pushHistory(r,'退租');
       r.tName='';r.tPhone='';r.tShare=1;r.cStart='';r.cEnd='';
       save();closeSheet();render();toast('已退租，房间转为空置');
     });
@@ -1205,6 +1241,7 @@ function changeMeter(rid){
 function swapRoom(rid){
   var r=room(rid);
   confirmModal('换房 · '+r.code,'将清空当前租客 '+esc(r.tName||'')+' 的信息（保留账单记录），然后进入签约流程登记新租客。','继续换房',function(){
+    pushHistory(r,'换房');
     r.tName='';r.tPhone='';r.tShare=1;r.cStart='';r.cEnd='';r.idCard=null;
     save();closeSheet();render();
     signModal(rid);
@@ -1474,10 +1511,17 @@ function print58(bid){
 /* ================= 催收 ================= */
 function urge(bid){
   var b=DB.bills.filter(function(x){return x.id===bid})[0];if(!b)return;
-  var r=room(b.roomId),p=prop(r.prop),od=overdueDays(b);
-  var txt='【智租管家】'+r.tName+'您好，您租住'+p.name+' '+r.code+' 的'+b.p+'账单（'+fmt(b.amt)+'）'+(od>0?'已逾期 '+od+' 天':'即将到期')+'，请尽快缴付，谢谢配合。';
-  copyText(txt);
-  b.reminded=true;save();
+  var r=room(b.roomId),p=prop(r.prop),od=overdueDays(b),fee=lateFee(b);
+  var txt='【智租管家】'+r.tName+'您好，您租住'+p.name+' '+r.code+'（'+r.type+'）的'+b.p+'账单，应收 '+Number(b.amt).toFixed(2)+' 元'+(fee>0?'，滞纳金 '+Number(fee).toFixed(2)+' 元（逾期 '+od+' 天），应付合计 '+Number(b.amt+fee).toFixed(2)+' 元':'')+'，'+(od>0?'已逾期 '+od+' 天，请尽快缴付':'收租日 '+b.due+'，请及时缴付')+'，谢谢配合。';
+  openModal('催收 · '+r.code+' '+b.p,
+    '<div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">将以下催收消息复制后发给租客（微信 / 短信）：</div>'+
+    '<div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:14px;line-height:1.9;color:var(--ink)">'+esc(txt)+'</div>'+
+    '<div class="acts"><button class="btn-ghost" data-act="closeModal">关闭</button><button class="btn-pri" id="urgOk">复制文案</button></div>');
+  $('#urgOk').addEventListener('click',function(){
+    copyText(txt);
+    b.reminded=true;save();
+    closeModal();toast('已复制催收文案');
+  });
 }
 /* ================= 图表 ================= */
 function chartColors(){
