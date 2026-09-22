@@ -261,7 +261,7 @@ html[data-theme="dark"] .seg button.on{color:#0E1524}
 <script>
 /* ================= 工具 ================= */
 var KEY='zzgj_v1';
-var APP_VER='v1.3.0';
+var APP_VER='v1.3.1';
 function pad(n){return n<10?'0'+n:''+n}
 function fmtDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
 function todayStr(){return fmtDate(new Date())}
@@ -471,7 +471,7 @@ function genBill(rid,p){
   p=cur.start.slice(0,7);
   var ex=billsOf(rid).filter(function(b){return b.p===p})[0];
   if(ex)return ex;
-  var items=[{name:'租金',amt:Math.round(r.rent*n*100)/100}];
+  var items=[{name:'租金',amt:periodBillAmt(r)}];
   if(r.mW==='meter'){
     var rdSum=Math.round(DB.readings.filter(function(x){return x.roomId===rid&&!x.note&&x.p>=p&&x.p<=curYm()}).reduce(function(s,x){return s+(x.wFee||0)},0)*100)/100;
     if(rdSum>0)items.push({name:'水费',amt:rdSum});
@@ -480,6 +480,13 @@ function genBill(rid,p){
   var b={id:uid(),roomId:rid,p:p,due:cur.start,range:cur.start+' ~ '+cur.end,items:items,amt:Math.round(amt*100)/100,st:'unpaid',no:billNo(p),reminded:false};
   if(n>1)b.cyc=(r.payCycle==='q'?'q':(r.payCycle==='h'?'h':'y'));
   DB.bills.push(b);return b;
+}
+/* 账期应收：季/半年/年交支持房东自定义优惠金额（periodAmt），优惠后每期均按此生成 */
+function periodBillAmt(r){
+  var n=cycleMonths(r);
+  var amt=(r.rent||0)*n;
+  if(n>1&&r.periodAmt>0)amt=r.periodAmt;
+  return Math.round(amt*100)/100;
 }
 function itemAccount(name){return name==='水费'?'water':(name==='电费'?'elec':(name==='押金'?'rent':'rent'))}
 function itemCat(name){return name==='水费'?'水费':(name==='电费'?'电费':(name==='押金'?'押金':'租金'))}
@@ -967,6 +974,8 @@ function openRoom(rid){
   h+='<div style="margin:6px 0 4px"><span class="mode '+(r.mW==='meter'?'meter':'prepaid')+'">水表·'+(r.mW==='meter'?'抄表':'预付费')+'</span><span class="mode '+(r.mE==='meter'?'meter':'prepaid')+'">电表·'+(r.mE==='meter'?'抄表':'预付费')+'</span>'+stChip(r)+'</div>';
   h+='<div class="kv"><span>户型 / 面积</span><b>'+esc(r.type)+' '+esc(r.area)+'</b></div>';
   h+='<div class="kv"><span>租金 / 押金</span><b>'+fmt(r.rent)+' / '+fmt(r.deposit)+'</b></div>';
+  var stdAmt=Math.round((r.rent||0)*cycleMonths(r)*100)/100;
+  h+='<div class="kv"><span>交租周期</span><b>'+cycleName(r.payCycle||'m')+(r.payCycle!=='m'?' · 每期应收 '+fmt(periodBillAmt(r))+(r.periodAmt>0&&r.periodAmt<stdAmt?'（标准 '+fmt(stdAmt)+'，让利 '+fmt(stdAmt-r.periodAmt)+'）':(r.periodAmt>0&&r.periodAmt>stdAmt?'（标准 '+fmt(stdAmt)+'，上浮 '+fmt(r.periodAmt-stdAmt)+'）':'')):'')+'</b></div>';
   h+='<div class="kv"><span>账单日</span><b>对齐起租日 · 每期起始日</b></div>';
   if(r.tName){
     h+='<div class="kv"><span>租客</span><b>'+esc(r.tName)+'（'+r.tShare+'人）</b></div>';
@@ -1272,16 +1281,27 @@ function signModal(rid){
     '<div style="font-size:12px;color:var(--muted);margin:2px 0 10px">房间参考租金 <b style="color:var(--primary)">'+fmt(r.rent)+'/月</b> · 可修改</div>'+
     '<div class="form-grid"><div class="form-row"><label>交租周期</label><select id="sCycle"><option value="m">月交（每月一收）</option><option value="q">季交（每季一收）</option><option value="h">半年交（每半年一收）</option><option value="y">年交（每年一收）</option></select></div>'+
     '<div class="form-row"><label>水表计费</label><select id="sW"><option value="meter">抄表</option><option value="prepaid">预付费</option></select></div></div>'+
+    '<div class="form-row" id="sDiscRow" style="display:none"><label>账期优惠金额（元，季/半年/年交可用）</label><input id="sDisc" type="number" step="0.01" min="0" placeholder="留空按周期总额"><div style="font-size:11.5px;color:var(--muted);margin-top:4px">优惠后<b>每期</b>均按此金额生成账单（如半年付 1260 → 优惠 1200，之后每期都收 1200）</div></div>'+
     '<div style="font-size:12.5px;background:var(--primary-soft);border-radius:10px;padding:10px 12px;margin-bottom:10px;color:var(--ink)">首期应付（账期总额）<b id="sTotal" style="font-size:15px;color:var(--primary)">—</b></div>'+
     '<div class="form-row"><label style="display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);cursor:pointer"><input id="sDepBill" type="checkbox" checked style="width:18px;height:18px">押金一并计入首期账单（收取时自动入账「租金总账·押金」，押金台账自动关联）</label></div>'+
     '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">账单日自动对齐登记入住日：每期账期为「起租日起至下期前一天」，账单日＝每期起始日。</div>'+
     '<div class="acts"><button class="btn-ghost" data-act="closeModal">取消</button><button class="btn-pri" id="sOk">签约</button></div>');
+  var discTouched=false;
   function updS(){
-    var rent=parseFloat($('#sRent').value),n={m:1,q:3,h:6,y:12}[$('#sCycle').value]||1;
-    $('#sTotal').textContent=fmt(isNaN(rent)||rent<=0?0:Math.round(rent*n*100)/100)+'（'+(n>1?n+' 个月租金':'当月租金')+'，不含押金）';
+    var rent=parseFloat($('#sRent').value),cyc=$('#sCycle').value,n={m:1,q:3,h:6,y:12}[cyc]||1;
+    var base=isNaN(rent)||rent<=0?0:Math.round(rent*n*100)/100;
+    $('#sDiscRow').style.display=n>1?'':'none';
+    if(!discTouched)$('#sDisc').value=base>0?base:'';
+    var disc=parseFloat($('#sDisc').value);
+    var pay=(n>1&&disc>0)?disc:base;
+    var dep=$('#sDepBill').checked?parseFloat($('#sDep').value)||0:0;
+    $('#sTotal').textContent=fmt(Math.round((pay+dep)*100)/100)+'（租金 '+fmt(pay)+(dep>0?' + 押金 '+fmt(dep):'')+'）';
   }
   $('#sRent').addEventListener('input',updS);
   $('#sCycle').addEventListener('change',updS);
+  $('#sDisc').addEventListener('input',function(){discTouched=true;updS()});
+  $('#sDep').addEventListener('input',updS);
+  $('#sDepBill').addEventListener('change',updS);
   updS();
   $('#sOk').addEventListener('click',function(){
     var name=$('#sName').value.trim(),phone=$('#sPhone').value.trim();
@@ -1293,6 +1313,9 @@ function signModal(rid){
     r.tName=name;r.tPhone=phone;r.tShare=parseInt($('#sShare').value)||1;
     r.cStart=start;r.cEnd=end;r.rent=rent;r.deposit=parseFloat($('#sDep').value)||0;
     r.payCycle=$('#sCycle').value||'m';
+    var n2={m:1,q:3,h:6,y:12}[r.payCycle]||1;
+    var disc=parseFloat($('#sDisc').value);
+    r.periodAmt=(n2>1&&disc>0)?Math.round(disc*100)/100:null;
     r.mW=$('#sW').value;r.wLast=r.wLast||0;r.reserve=null;
     var b=genBill(rid,curYm());
     if(b&&$('#sDepBill').checked&&r.deposit>0){
@@ -1307,8 +1330,11 @@ function renewModal(rid){
   var r=room(rid);
   var newRent=r.rent,incNote='';
   if(r.inc>0){newRent=Math.round(r.rent*(1+r.inc/100));incNote='<div style="font-size:12.5px;color:var(--primary);background:var(--primary-soft);border-radius:10px;padding:9px 12px;margin-bottom:12px">按年递增 '+r.inc+'%，续租后租金自动为 '+fmt(newRent)+'/月（可修改）</div>'}
+  var nn=cycleMonths(r);
+  var defDisc=(newRent===r.rent&&r.periodAmt>0)?r.periodAmt:Math.round(newRent*nn*100)/100;
   openModal('续租 · '+r.code+' '+esc(r.tName),incNote+'<div class="form-row"><label>新的合同到期日</label><input id="nEnd" type="date" value="'+(r.cEnd||'')+'"></div>'+
     '<div class="form-row"><label>续租后租金（元/月，可选调整）</label><input id="nRent" type="number" step="0.01" min="0" value="'+newRent+'"></div>'+
+    (r.payCycle!=='m'?'<div class="form-row"><label>账期优惠金额（元，'+cycleName(r.payCycle)+'）</label><input id="nDisc" type="number" step="0.01" min="0" value="'+defDisc+'"><div style="font-size:11.5px;color:var(--muted);margin-top:4px">续租后每期仍按此优惠金额生成账单；留空恢复标准 '+fmt(Math.round(newRent*nn*100)/100)+'。</div></div>':'')+
     '<div class="acts"><button class="btn-ghost" data-act="closeModal">取消</button><button class="btn-pri" id="nOk">确认续租</button></div>');
   $('#nOk').addEventListener('click',function(){
     var end=$('#nEnd').value,rent=parseFloat($('#nRent').value);
@@ -1316,6 +1342,10 @@ function renewModal(rid){
     if(end<r.cStart){toast('到期日不能早于起租日');return}
     if(isNaN(rent)||rent<=0){toast('租金无效');return}
     r.cEnd=end;r.rent=rent;
+    if(r.payCycle!=='m'){
+      var disc=parseFloat($('#nDisc').value);
+      r.periodAmt=(disc>0)?Math.round(disc*100)/100:null;
+    }
     save();closeModal();closeSheet();render();toast('已续租至 '+end);
   });
 }
@@ -1340,7 +1370,11 @@ function editRoomModal(rid){
     '<div class="form-row"><label>押金（元）</label><input id="eDep" type="number" step="0.01" min="0" value="'+r.deposit+'"></div></div>'+
     '<div class="form-grid"><div class="form-row"><label>交租周期</label><select id="eCycle"><option value="m" '+(r.payCycle==='m'?'selected':'')+'>月交</option><option value="q" '+(r.payCycle==='q'?'selected':'')+'>季交</option><option value="h" '+(r.payCycle==='h'?'selected':'')+'>半年交</option><option value="y" '+(r.payCycle==='y'?'selected':'')+'>年交</option></select></div>'+
     '<div class="form-row"><label>租金年递增率（%，可选）</label><input id="eInc" type="number" step="0.5" min="0" value="'+(r.inc||0)+'" placeholder="续租时自动按此比例涨租"></div></div>'+
+    '<div class="form-row" id="eDiscRow" style="display:none"><label>账期优惠金额（元，季/半年/年交可用）</label><input id="eDisc" type="number" step="0.01" min="0" value="'+(r.periodAmt||'')+'" placeholder="留空按周期总额（月租×N）"><div style="font-size:11.5px;color:var(--muted);margin-top:4px">设置后每期账单均按此优惠金额生成；留空恢复标准周期总额。</div></div>'+
     '<div class="acts"><button class="btn-ghost" data-act="closeModal">取消</button><button class="btn-pri" id="eOk">保存</button></div>');
+  function updE(){$('#eDiscRow').style.display=$('#eCycle').value==='m'?'none':''}
+  $('#eCycle').addEventListener('change',updE);
+  updE();
   $('#eOk').addEventListener('click',function(){
     var rent=parseFloat($('#eRent').value);
     if(isNaN(rent)||rent<=0){toast('租金无效');return}
@@ -1348,6 +1382,8 @@ function editRoomModal(rid){
     r.rent=rent;r.deposit=parseFloat($('#eDep').value)||0;
     r.payCycle=$('#eCycle').value||'m';
     r.inc=parseFloat($('#eInc').value)||0;
+    var disc=parseFloat($('#eDisc').value);
+    r.periodAmt=(r.payCycle!=='m'&&disc>0)?Math.round(disc*100)/100:null;
     save();closeModal();closeSheet();render();toast('已保存');
   });
 }
