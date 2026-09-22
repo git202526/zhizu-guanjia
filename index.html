@@ -138,6 +138,21 @@ html[data-theme="dark"] .subtabs button.on{color:#0E1524}
 .mode.meter{background:var(--primary-soft);color:var(--primary-d)}
 .mode.prepaid{background:var(--empty-soft);color:var(--empty)}
 .mini-btn{padding:7px 14px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--primary-d);font-size:12.5px;font-weight:700;flex:0 0 auto}
+/* ================= 日历 ================= */
+.cal{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:12px 10px 14px}
+.cal-hd{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:6px}
+.cal-hd i{font-style:normal;text-align:center;font-size:11.5px;color:var(--muted);padding:4px 0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
+.cal-grid>i{position:relative;font-style:normal;text-align:center;padding:9px 0 12px;font-size:14px;color:var(--ink);border-radius:9px}
+.cal-grid>i.today{background:var(--primary-soft);color:var(--primary-d);font-weight:800}
+.cal-grid>i span{position:absolute;left:50%;bottom:4px;width:5px;height:5px;border-radius:50%;margin-left:-2.5px}
+.cal-grid>i span.d-bill{background:var(--primary)}
+.cal-grid>i span.d-exp{background:var(--warn)}
+.cal-grid>i span.d-rsv{background:#7C5CFC}
+.dot-l{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:1px}
+.dot-l.bill{background:var(--primary)}
+.dot-l.exp{background:var(--warn)}
+.dot-l.rsv{background:#7C5CFC}
 /* ================= 我的 ================= */
 .menu{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
 .menu .mi{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
@@ -420,11 +435,11 @@ function allInOutRange(f,t){
   return {in:acc.rent.in+acc.elec.in+acc.water.in, out:acc.rent.out+acc.elec.out+acc.water.out};
 }
 /* ================= 路由 / 状态 ================= */
-var state={view:'home',pf:'all',bt:'unpaid',tq:'',meView:null,q:'',sheet:null,modal:null,range:'this'};
+var state={view:'home',pf:'all',bt:'unpaid',tq:'',meView:null,q:'',sheet:null,modal:null,range:'this',calYm:null};
 function route(){
   var h=location.hash.replace('#/','');
   if(['home','props','tenants','bills','me'].indexOf(h)>-1){state.view=h;state.meView=null}
-  if(['reports','contracts','settings','data'].indexOf(h)>-1){state.view='me';state.meView=h}
+  if(['reports','contracts','settings','data','calendar'].indexOf(h)>-1){state.view='me';state.meView=h}
   render();
 }
 /* ================= 渲染入口 ================= */
@@ -606,6 +621,7 @@ function vMe(){
   if(state.meView==='contracts')return vContracts();
   if(state.meView==='settings')return vSettings();
   if(state.meView==='data')return vData();
+  if(state.meView==='calendar')return vCalendar();
   var M=curYm(),acc=accounts(M),v=DB.rooms.filter(function(r){return rStatus(r)==='vacant'}).length;
   var h='';
   h+='<div class="card" style="display:flex;align-items:center;gap:14px"><div class="avatar" style="width:52px;height:52px;font-size:20px">房</div><div><div style="font-size:17px;font-weight:800">房东账号</div><div style="font-size:12.5px;color:var(--muted)">'+DB.rooms.length+' 间房 · 在租 '+ (DB.rooms.length-v) +' 间 · 空置 '+v+' 间</div></div></div>';
@@ -617,6 +633,7 @@ function vMe(){
   h+='<div style="height:14px"></div>';
   h+='<div class="menu">'+
      '<div class="mi" data-mv="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5M12 16V8M16 16v-7"/></svg><span class="t">收支报表</span><span class="v">三本账 · 图表</span></div>'+
+     '<div class="mi" data-mv="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8.5 14.5l2 2 4-4.5"/></svg><span class="t">日历待办</span><span class="v">收租 · 到期 · 预定</span></div>'+
      '<div class="mi" data-mv="contracts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 3h10v18l-2.5-1.6L12 21l-2.5-1.6L7 21V3z"/><path d="M10 8h4"/></svg><span class="t">合同中心</span><span class="v">续租 · 退租</span></div>'+
      '<div class="mi" data-act="openReceipt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v6H4z"/><path d="M6 10v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/><path d="M8 14h3M13 14h3M8 17h2"/></svg><span class="t">收据打印</span><span class="v">押金 · 订金 · 58mm</span></div>'+
      '<div class="mi" data-mv="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M19 12a7 7 0 0 0-.14-1.4l2-1.55-2-3.46-2.35.95A7 7 0 0 0 14 5.1L13.7 2.6h-3.4L10 5.1a7 7 0 0 0-2.5 1.44l-2.36-.95-2 3.46 2 1.55A7 7 0 0 0 5 12c0 .48.05.94.14 1.4l-2 1.55 2 3.46 2.36-.95A7 7 0 0 0 10 18.9l.3 2.5h3.4l.3-2.5a7 7 0 0 0 2.5-1.44l2.36.95 2-3.46-2-1.55c.09-.46.14-.92.14-1.4z"/></svg><span class="t">设置</span><span class="v">主题 · 单价 · 滞纳金 · 收款码</span></div>'+
@@ -681,6 +698,68 @@ function vData(){
      '<div class="kv"><span>抄表记录</span><b>'+DB.readings.length+'</b></div>'+
      '<div class="kv"><span>流水</span><b>'+DB.flows.length+'</b></div></div>';
   return h;
+}
+/* ================= 日历待办 ================= */
+function calShift(YM,delta){
+  var a=YM.split('-'),y=+a[0],m=+a[1]+delta;
+  if(m===0){m=12;y--}if(m===13){m=1;y++}
+  return y+'-'+pad(m);
+}
+function vCalendar(){
+  var YM=state.calYm||curYm(),h=meBack('日历待办');
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
+     '<button data-cal-nav="-1" style="border:1px solid var(--line);background:var(--card);border-radius:10px;width:38px;height:38px;font-size:18px;color:var(--ink)">‹</button>'+
+     '<b style="flex:1;text-align:center;font-size:17px">'+YM+'</b>'+
+     '<button data-cal-nav="1" style="border:1px solid var(--line);background:var(--card);border-radius:10px;width:38px;height:38px;font-size:18px;color:var(--ink)">›</button>'+
+     '<button data-cal-nav="0" style="border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px;font-size:12.5px;color:var(--primary-d);font-weight:700">本月</button></div>';
+  var dueBills=DB.bills.filter(function(b){return b.st==='unpaid'&&b.due.indexOf(YM)===0});
+  var expiring=DB.rooms.filter(function(r){return r.tName&&r.cEnd&&r.cEnd.indexOf(YM)===0});
+  var reserves=DB.rooms.filter(function(r){return r.reserve&&r.reserve.date&&r.reserve.date.indexOf(YM)===0});
+  var a=YM.split('-'),y=+a[0],m=+a[1];
+  var first=new Date(y,m-1,1),startDow=(first.getDay()+6)%7,days=new Date(y,m,0).getDate();
+  var marks={};
+  dueBills.forEach(function(b){var d=+b.due.slice(8,10);(marks[d]=marks[d]||[]).push('bill')});
+  expiring.forEach(function(r){var d=+r.cEnd.slice(8,10);(marks[d]=marks[d]||[]).push('exp')});
+  reserves.forEach(function(r){var d=+r.reserve.date.slice(8,10);(marks[d]=marks[d]||[]).push('rsv')});
+  h+='<div class="cal"><div class="cal-hd">'+['一','二','三','四','五','六','日'].map(function(x){return'<i>'+x+'</i>'}).join('')+'</div><div class="cal-grid">';
+  for(var i=0;i<startDow;i++)h+='<i></i>';
+  for(var d=1;d<=days;d++){
+    var t=marks[d]||[],today=(YM===curYm()&&d===+todayStr().slice(8,10));
+    var dots=t.map(function(k){return'<span class="d-'+k+'"></span>'}).join('');
+    h+='<i class="'+(today?'today':'')+'" data-cal-day="'+YM+'-'+pad(d)+'" style="cursor:pointer">'+d+dots+'</i>';
+  }
+  h+='</div></div>';
+  h+='<div style="display:flex;gap:14px;font-size:12px;color:var(--muted);margin:10px 2px 12px">'+
+     '<span><i class="dot-l bill"></i>应收 '+dueBills.length+' 笔</span>'+
+     '<span><i class="dot-l exp"></i>合同到期 '+expiring.length+' 份</span>'+
+     '<span><i class="dot-l rsv"></i>预定 '+reserves.length+' 个</span>'+
+     '<span style="margin-left:auto;color:var(--primary-d)">点击日期看当天</span></div>';
+  var items=[];
+  dueBills.forEach(function(b){
+    var r=room(b.roomId),od=overdueDays(b);
+    items.push({date:b.due,html:'<div class="bill-row" style="padding:9px 0" data-open-bill="'+b.id+'"><div class="room-tag">收租</div><div class="info"><b>'+esc(r.code)+' · '+esc(r.tName||'')+'</b><span>'+esc(b.due)+' · 应缴 '+fmt(b.amt)+'</span></div><div class="amt">'+(od>0?'<span class="chip up">逾期'+od+'天</span>':'<span class="chip warn">待收</span>')+'</div></div>'});
+  });
+  expiring.forEach(function(r){
+    items.push({date:r.cEnd,html:'<div class="bill-row" style="padding:9px 0" data-open-room="'+r.id+'"><div class="room-tag" style="background:var(--warn-soft);color:var(--warn)">到期</div><div class="info"><b>'+esc(r.code)+' · '+esc(r.tName)+'</b><span>合同至 '+esc(r.cEnd)+' · 需续租或退租</span></div><div class="amt"><span class="chip warn">续租</span></div></div>'});
+  });
+  reserves.forEach(function(r){
+    items.push({date:r.reserve.date,html:'<div class="bill-row" style="padding:9px 0" data-open-room="'+r.id+'"><div class="room-tag" style="background:#EDEBFE;color:#7C5CFC">预定</div><div class="info"><b>'+esc(r.code)+'</b><span>'+esc(r.reserve.date)+' · 预定人 '+esc(r.reserve.name||'—')+'</span></div><div class="amt"><span class="chip down">待签约</span></div></div>'});
+  });
+  items.sort(function(x,y){return x.date<y.date?-1:1});
+  h+='<div class="card" style="padding:4px 16px"><div style="font-size:13.5px;font-weight:700;padding:10px 0 2px">'+YM+' 待办</div>'+
+     (items.length?items.map(function(x){return x.html}).join(''):'<div style="padding:22px 0;text-align:center;color:var(--muted);font-size:13px">本月没有待办事项</div>')+'</div>';
+  return h;
+}
+function calendarDayModal(ds){
+  var due=DB.bills.filter(function(b){return b.st==='unpaid'&&b.due===ds});
+  var exp=DB.rooms.filter(function(r){return r.tName&&r.cEnd===ds});
+  var rsv=DB.rooms.filter(function(r){return r.reserve&&r.reserve.date===ds});
+  var body='';
+  if(!due.length&&!exp.length&&!rsv.length){body='<div style="padding:26px 0;text-align:center;color:var(--muted);font-size:13px">'+ds+' 没有待办</div>'}
+  due.forEach(function(b){var r=room(b.roomId);body+='<div class="kv"><span>收租</span><b>'+esc(r.code)+' '+esc(r.tName||'')+' · '+fmt(b.amt)+'</b></div>'});
+  exp.forEach(function(r){body+='<div class="kv"><span>合同到期</span><b>'+esc(r.code)+' '+esc(r.tName)+'</b></div>'});
+  rsv.forEach(function(r){body+='<div class="kv"><span>预定</span><b>'+esc(r.code)+' '+esc(r.reserve.name||'')+'</b></div>'});
+  openModal(ds+' 待办',body+'<div class="acts"><button class="btn-pri" data-act="closeModal">知道了</button></div>');
 }
 /* ================= 收支报表 ================= */
 function vReports(){
@@ -1478,7 +1557,7 @@ function clearData(){
 }
 /* ================= 全局事件 ================= */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-v],[data-pf],[data-bt],[data-mv],[data-act],[data-room],[data-open-room],[data-open-bill],[data-theme-set],[data-rid],[data-bid],[data-range],[data-late-set]');
+  var t=e.target.closest('[data-v],[data-pf],[data-bt],[data-mv],[data-act],[data-room],[data-open-room],[data-open-bill],[data-theme-set],[data-rid],[data-bid],[data-range],[data-late-set],[data-cal-nav],[data-cal-day]');
   if(!t)return;
   var v=t.getAttribute('data-v');
   if(v){location.hash='#/'+v;return}
@@ -1494,6 +1573,10 @@ document.addEventListener('click',function(e){
   if(rg){state.range=rg;render();return}
   var ls=t.getAttribute('data-late-set');
   if(ls){DB.settings.lateOn=(ls==='on');save();render();return}
+  var cnav=t.getAttribute('data-cal-nav');
+  if(cnav!==null){var YM=state.calYm||curYm();state.calYm=cnav==='0'?curYm():calShift(YM,parseInt(cnav));render();return}
+  var cday=t.getAttribute('data-cal-day');
+  if(cday){calendarDayModal(cday);return}
   var rid=t.getAttribute('data-rid'),bid=t.getAttribute('data-bid');
   var ob=t.getAttribute('data-open-bill');if(ob){openBill(ob);return}
   var or=t.getAttribute('data-open-room')||t.getAttribute('data-room');if(or){openRoom(or);return}
