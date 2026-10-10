@@ -169,6 +169,7 @@ html[data-theme="dark"] .subtabs button.on{color:#0E1524}
 .mini-bars i.r{background:var(--up-soft)}.mini-bars i.g{background:var(--down-soft)}
 /* ================= 底部导航 ================= */
 .tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--navbg);backdrop-filter:blur(12px);border-top:1px solid var(--line);z-index:50}
+.tabbar .brand,.tabbar .ver{display:none}
 .tabbar .in{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);padding:6px 8px calc(10px + env(safe-area-inset-bottom))}
 .tabbar button{background:transparent;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0;color:var(--muted);font-size:11px}
 .tabbar button svg{width:22px;height:22px}
@@ -231,12 +232,72 @@ html[data-theme="dark"] .seg button.on{color:#0E1524}
 #printArea .r58 .sep{border-top:1px dashed #000;margin:1.5mm 0}
 /* ================= 桌面端 ================= */
 @media(min-width:900px){
-  .tabbar{top:0;right:auto;width:196px;border-top:none;border-right:1px solid var(--line)}
-  .tabbar .in{max-width:none;grid-template-columns:1fr;padding:26px 12px;gap:4px;align-content:start}
-  .tabbar button{flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;font-size:14px;border-radius:12px}
+  .tabbar{top:0;left:0;right:auto;bottom:0;width:224px;border-top:none;border-right:1px solid var(--line);display:flex;flex-direction:column}
+  .tabbar .in{max-width:none;grid-template-columns:1fr;padding:0;gap:2px;align-content:start;flex:1}
+  .tabbar .brand{display:flex;align-items:center;gap:11px;padding:24px 20px 18px}
+  .tabbar .brand .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#2E90FA,#55A6F8);display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 38px}
+  html[data-theme="dark"] .tabbar .brand .logo{background:linear-gradient(135deg,#13203A,#1B2B4E);border:1px solid rgba(217,164,65,.4);color:var(--gold)}
+  .tabbar .brand b{display:block;font-size:16.5px;font-weight:800;line-height:1.25}
+  .tabbar .brand span{font-size:11px;color:var(--muted)}
+  .tabbar button{flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;font-size:14px;border-radius:10px;margin:0 10px;position:relative;transition:background .15s}
+  .tabbar button:hover{background:var(--primary-soft)}
   .tabbar button .ic{width:34px;height:34px;border-radius:10px}
-  .wrap{margin-left:196px;max-width:720px;padding:22px 28px 60px}
-  .room-grid{grid-template-columns:repeat(4,1fr)}
+  .tabbar button.on{background:var(--primary-soft);color:var(--primary-d);font-weight:700}
+  html[data-theme="dark"] .tabbar button.on{color:var(--primary)}
+  .tabbar button.on::before{content:"";position:absolute;left:-10px;top:20%;bottom:20%;width:3px;border-radius:0 3px 3px 0;background:var(--primary)}
+  .tabbar .ver{margin-top:auto;padding:0 0 22px;text-align:center;font-size:11px;color:var(--muted)}
+  .wrap{margin-left:224px;max-width:1240px;padding:26px 42px 80px}
+  .appbar{padding:4px 2px 20px}
+  .appbar h1{font-size:24px}
+  .appbar .date{font-size:13px}
+  .hero{padding:26px 30px;border-radius:20px}
+  .hero .top b{font-size:18px}
+  .hero .big{font-size:42px}
+  .hero .stats{gap:0;margin-top:18px;border-top:1px solid rgba(255,255,255,.22);padding-top:16px;justify-content:space-between}
+  html[data-theme="dark"] .hero .stats{border-top-color:rgba(217,164,65,.22)}
+  .hero .stats div{font-size:12.5px}
+  .hero .stats b{font-size:18px}
+  .home-cols{display:grid;grid-template-columns:1.65fr 1fr;gap:14px;align-items:start}
+  .pc-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  .pc-narrow{max-width:880px}
+  .room-grid{grid-template-columns:repeat(5,1fr);gap:12px}
+  .room{padding:14px}
+  .quick{gap:12px}
+  .quick button{padding:16px 6px;font-size:13px}
+  .quick.two{grid-template-columns:1fr 1fr;max-width:560px}
+  .fen-card{grid-template-columns:repeat(4,1fr);gap:12px}
+  .fen-card .it{padding:16px}
+  .fen-card .it b{font-size:21px}
+  .fen-card.fc5{grid-template-columns:repeat(5,1fr)}
+  .fen-card.fc2{grid-template-columns:repeat(2,1fr);max-width:760px}
+  .tenant-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  .tenant-grid .tenant-row{margin-bottom:0}
+  .menu{display:grid;grid-template-columns:1fr 1fr;padding:6px 0}
+  .menu .mi{padding:16px 18px}
+  .menu .mi:nth-child(odd){border-right:1px solid var(--line)}
+  /* 账单表格 */
+  .bill-table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .bill-table th{font-size:12px;color:var(--muted);font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .bill-table th.r,.bill-table td.r{text-align:right}
+  .bill-table td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  .bill-table tr:last-child td{border-bottom:none}
+  .bill-table td .s{font-size:12px;color:var(--muted)}
+  .bill-table td b{font-size:14px}
+  .bill-table .acts{display:flex;gap:6px;flex-wrap:wrap}
+  .bill-table .acts button{border:1px solid var(--line);background:var(--card);border-radius:8px;font-size:12px;padding:6px 11px;color:var(--sub)}
+  .bill-table .acts button.pri{border-color:var(--primary);color:var(--primary-d);background:var(--primary-soft);font-weight:700}
+  .bill-table tr[data-open-bill]{cursor:pointer}
+  /* 弹层桌面居中 */
+  .sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-46%) scale(.98);border-radius:18px;box-shadow:0 18px 50px rgba(20,30,50,.18);max-width:560px;max-height:84vh;overflow:auto}
+  .sheet.show{transform:translate(-50%,-50%) scale(1)}
+  .sheet .bar{display:none}
+  .modal{width:min(560px,50vw)}
+  #toast{bottom:36px}
+  /* 报表图表 */
+  #barChart{height:300px!important}
+  #pieChart{height:300px!important}
+  #flowList{display:grid;grid-template-columns:1fr 1fr;column-gap:28px}
+  #flowList .bill-row{border-bottom:1px solid var(--line)}
 }
 </style>
 </head>
@@ -261,7 +322,7 @@ html[data-theme="dark"] .seg button.on{color:#0E1524}
 <script>
 /* ================= 工具 ================= */
 var KEY='zzgj_v1';
-var APP_VER='v1.4.0';
+var APP_VER='v1.5.0';
 function pad(n){return n<10?'0'+n:''+n}
 function fmtDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
 function todayStr(){return fmtDate(new Date())}
@@ -274,6 +335,8 @@ function $(s){return document.querySelector(s)}
 function fmt(n){return '¥'+Number(n||0).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function uid(){return 'id'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36)}
+function isPC(){return window.innerWidth>=900}
+var PC_TITLES={home:'工作台',props:'房源管理',tenants:'租客管理',bills:'账单管理',ledger:'记账本',me:'我的'};
 /* ================= 示例数据（相对当前日期生成，保证口径自洽） ================= */
 function buildDemo(){
   var T=todayStr(), M=curYm(), PM=prevYm(M);
@@ -548,6 +611,7 @@ function route(){
 /* ================= 渲染入口 ================= */
 function render(){
   $('#appDate').textContent=todayStr();
+  $('#appTitle').textContent=isPC()?(PC_TITLES[state.view]||'智租管家'):'智租管家';
   var views={home:vHome,props:vProps,tenants:vTenants,bills:vBills,ledger:vLedger,me:vMe};
   var html=views[state.view]();
   $('#view').innerHTML=html;
@@ -565,10 +629,11 @@ function renderTab(){
     ledger:'<path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z"/><path d="M5 4a2 2 0 0 1 2-2h11"/><path d="M9 9h6M9 13h6"/>',
     me:'<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-4.2 3.5-6.3 7-6.3s6.2 2.1 7 6.3"/>'
   };
-  $('#tabbar').innerHTML=navs.map(function(n){
-    var on=state.view===n[0]?'on':'';
-    return '<button class="'+on+'" data-v="'+n[0]+'"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+ic[n[0]]+'</svg></span>'+n[1]+'</button>';
-  }).join('');
+  $('#tabbar').innerHTML='<div class="brand"><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg></div><div><b>智租管家</b><span>'+APP_VER+'</span></div></div>'+
+    navs.map(function(n){
+      var on=state.view===n[0]?'on':'';
+      return '<button class="'+on+'" data-v="'+n[0]+'"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+ic[n[0]]+'</svg></span>'+n[1]+'</button>';
+    }).join('')+'<div class="ver">'+APP_VER+' · 数据仅存本机</div>';
 }
 /* ================= 视图公共件 ================= */
 var postRender=null;
@@ -598,6 +663,22 @@ function billRow(b,inline){
     '<div class="info"><b>'+esc(r.tName||'空置')+' · '+esc(r.code)+'</b><span>'+esc(rShort(b))+' · 账单日 '+esc(b.due.slice(5))+'</span>'+billChip(b)+feeChip+'</div>'+
     '<div class="amt"><b>'+fmt(b.amt)+'</b></div>'+acts+'</div>';
 }
+function billTable(rows){
+  var h='<table class="bill-table"><thead><tr><th style="width:8%">房号</th><th>租客 / 账期</th><th style="width:11%">状态</th><th style="width:10%">滞纳金</th><th style="width:12%" class="r">金额</th><th>操作</th></tr></thead><tbody>';
+  rows.forEach(function(b){
+    var r=room(b.roomId);
+    var acts=b.st==='unpaid'?
+      '<div class="acts"><button class="pri" data-act="pay" data-bid="'+b.id+'">收租</button><button data-act="qr" data-bid="'+b.id+'">收款码</button><button data-act="photo" data-bid="'+b.id+'">照片账单</button><button data-act="print58" data-bid="'+b.id+'">58mm</button><button data-act="urge" data-bid="'+b.id+'">催收</button></div>':
+      '<div class="acts"><button data-act="photo" data-bid="'+b.id+'">照片账单</button><button data-act="print58" data-bid="'+b.id+'">58mm</button><button data-act="revert" data-bid="'+b.id+'">撤销到账</button></div>';
+    var od=overdueDays(b);
+    var st=b.st==='paid'?'<span class="chip down">已收</span>':(od>0?'<span class="chip up">逾期'+od+'天</span>':'<span class="chip warn">待收</span>');
+    var lf=(b.st==='unpaid'&&lateFee(b)>0)?'<span class="chip warn">'+fmt(lateFee(b))+'</span>':'<span style="color:var(--muted)">—</span>';
+    h+='<tr data-open-bill="'+b.id+'"><td><b>'+esc(r.code)+'</b></td>'+
+       '<td><b>'+esc(r.tName||'空置')+'</b><div class="s">'+esc(rShort(b))+' · 账单日 '+esc(b.due.slice(5))+'</div></td>'+
+       '<td>'+st+'</td><td>'+lf+'</td><td class="r"><b>'+fmt(b.amt)+'</b></td><td>'+acts+'</td></tr>';
+  });
+  return h+'</tbody></table>';
+}
 /* ================= 工作台 ================= */
 function vHome(){
   var M=curYm(), io=allInOut(M);
@@ -615,11 +696,12 @@ function vHome(){
   h+='<div class="card hero"><div class="top"><b>智租管家</b><span>'+M+'</span></div>'+
      '<div class="big">'+fmt(io.in-io.out)+'<small>本月收支结余</small></div>'+
      '<div class="stats"><div>本月应收<b>'+fmt(ying)+'</b></div><div>本月实收<b>'+fmt(shi)+'</b></div><div>本月支出<b>'+fmt(io.out)+'</b></div><div>空置率<b>'+rate+'%</b></div></div></div>';
-  h+='<div class="card"><h2>今日待办</h2>'+
+  var todoCard='<div class="card"><h2>今日待办</h2>'+
      '<div class="todo-item"><span class="dot up"></span><span class="t">逾期未收账单</span><span class="n up">'+ov.length+'笔 · '+fmt(ovAmt)+'</span></div>'+
      '<div class="todo-item"><span class="dot warn"></span><span class="t">30天内到期合同</span><span class="n warn">'+expN+'份</span></div>'+
      '<div class="todo-item"><span class="dot primary"></span><span class="t">今日应收</span><span class="n primary">'+todayDue+'笔</span></div></div>';
-  h+='<div class="card"><h2>近期收租<span class="more" data-goto="bills">全部账单</span></h2>'+(rows.length?rows.map(function(b){return billRow(b,false)}).join(''):'<div style="padding:14px 0;text-align:center;color:var(--muted);font-size:13px">本月没有未收账单</div>')+'</div>';
+  var rentCard='<div class="card"><h2>近期收租<span class="more" data-goto="bills">全部账单</span></h2>'+(rows.length?rows.map(function(b){return billRow(b,false)}).join(''):'<div style="padding:14px 0;text-align:center;color:var(--muted);font-size:13px">本月没有未收账单</div>')+'</div>';
+  h+=isPC()?'<div class="home-cols">'+rentCard+todoCard+'</div>':todoCard+rentCard;
   h+='<div class="quick">'+
      '<button data-act="gotoBills"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v18l-2.5-1.6L12 21l-2.5-1.6L7 21V3z"/></svg>去收租</button>'+
      '<button data-act="openMeter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4.5l3 1.8"/></svg>集中抄表</button>'+
@@ -658,11 +740,12 @@ function vTenants(){
   var h='<div class="search"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="tq" placeholder="搜姓名 / 电话 / 房号" value="'+esc(state.tq)+'"></div>';
   h+='<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">共 '+ts.length+' 位在租租客</div>';
   if(!ts.length){h+='<div style="padding:40px 0;text-align:center;color:var(--muted)">暂无在租租客</div>';return h}
-  ts.forEach(function(r){
+  var items=ts.map(function(r){
     var p=prop(r.prop);
-    h+='<div class="tenant-row" data-open-room="'+r.id+'"><div class="avatar">'+esc(r.tName.charAt(0))+'</div>'+
+    return '<div class="tenant-row" data-open-room="'+r.id+'"><div class="avatar">'+esc(r.tName.charAt(0))+'</div>'+
       '<div class="info"><b>'+esc(r.tName)+'</b><span>'+esc(p.name)+' · '+esc(r.code)+' '+esc(r.type)+'</span><span>'+esc(r.tPhone)+' · 租期至 '+esc(r.cEnd)+'</span>'+stChip(r)+'</div></div>';
-  });
+  }).join('');
+  h+=isPC()?'<div class="tenant-grid">'+items+'</div>':items;
   return h;
 }
 /* ================= 账单 ================= */
@@ -683,13 +766,13 @@ function vBills(){
     });
     h+='<div class="sum2"><div class="item"><span>本月应收</span><b style="color:var(--up)">'+fmt(sum)+'</b></div><div class="item"><span>逾期未收 · '+ovN+'笔</span><b style="color:var(--up)">'+fmt(ovAmt)+'</b></div></div>';
     h+='<button class="mini-btn" data-act="copyUrgeList" style="width:100%;padding:11px 0;margin-bottom:12px">一键复制全部未收账单催收清单</button>';
-    h+='<div class="card" style="padding:4px 16px">'+(rows.length?rows.map(function(b){return billRow(b,true)}).join(''):'<div style="padding:26px 0;text-align:center;color:var(--muted);font-size:13px">全部收齐，暂无未收账单</div>')+'</div>';
+    h+='<div class="card" style="padding:'+(isPC()?'6px 18px 10px':'4px 16px')+'">'+(rows.length?(isPC()?billTable(rows):rows.map(function(b){return billRow(b,true)}).join('')):'<div style="padding:26px 0;text-align:center;color:var(--muted);font-size:13px">全部收齐，暂无未收账单</div>')+'</div>';
     h+='<button class="btn-full" data-act="genAll" style="width:100%;padding:13px 0;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14.5px;font-weight:700">生成本月全部账单</button>';
   }else{
     var rows=DB.bills.filter(function(b){return b.st==='paid'}).sort(function(a,b){return b.paidAt<b.paidAt?1:-1});
     var sumM=rows.filter(function(b){return b.p===M}).reduce(function(s,b){return s+b.amt},0);
     h+='<div class="sum2"><div class="item"><span>本月已收</span><b style="color:var(--up)">'+fmt(sumM)+'</b></div><div class="item"><span>历史已收</span><b style="color:var(--sub)">'+fmt(rows.length)+'笔</b></div></div>';
-    h+='<div class="card" style="padding:4px 16px">'+(rows.length?rows.map(function(b){return billRow(b,true)}).join(''):'<div style="padding:26px 0;text-align:center;color:var(--muted);font-size:13px">暂无已收记录</div>')+'</div>';
+    h+='<div class="card" style="padding:'+(isPC()?'6px 18px 10px':'4px 16px')+'">'+(rows.length?(isPC()?billTable(rows):rows.map(function(b){return billRow(b,true)}).join('')):'<div style="padding:26px 0;text-align:center;color:var(--muted);font-size:13px">暂无已收记录</div>')+'</div>';
   }
   return h;
 }
@@ -697,28 +780,28 @@ function vMeter(){
   var M=curYm(),h='';
   var w=DB.rooms.filter(function(r){return r.mW==='meter'});
   var e=DB.rooms.filter(function(r){return r.mE==='prepaid'||r.mE==='meter'});
-  h+='<div class="card"><h2>水表 · 抄表计费<span class="more" data-act="openWaterRate">单价 ¥'+Number(DB.settings.wRate).toFixed(2)+'/吨</span></h2>';
-  if(!w.length){h+='<div style="color:var(--muted);font-size:13px;padding:4px 0">暂无抄表计费水表</div>'}
+  var meterCard='<div class="card"><h2>水表 · 抄表计费<span class="more" data-act="openWaterRate">单价 ¥'+Number(DB.settings.wRate).toFixed(2)+'/吨</span></h2>';
+  if(!w.length){meterCard+='<div style="color:var(--muted);font-size:13px;padding:4px 0">暂无抄表计费水表</div>'}
   w.forEach(function(r){
     var rd=readingOf(r.id,M),p=prop(r.prop);
-    h+='<div class="meter-row"><div class="info"><b>'+esc(p.name)+' '+esc(r.code)+' · '+esc(r.tName||'空置')+'</b><span>本期 '+(rd?('读数 '+rd.wStart+' → '+rd.wEnd+'t · '+fmt(rd.wFee)):'未录入')+'</span></div>'+
+    meterCard+='<div class="meter-row"><div class="info"><b>'+esc(p.name)+' '+esc(r.code)+' · '+esc(r.tName||'空置')+'</b><span>本期 '+(rd?('读数 '+rd.wStart+' → '+rd.wEnd+'t · '+fmt(rd.wFee)):'未录入')+'</span></div>'+
        '<button class="mini-btn" data-act="meterIn" data-rid="'+r.id+'">录入</button></div>';
   });
-  h+='</div>';
-  h+='<div class="card"><h2>电表 · 预付费充值<span class="more" data-act="openElecRate">说明</span></h2>'+
+  meterCard+='</div>';
+  var elecCard='<div class="card"><h2>电表 · 预付费充值<span class="more" data-act="openElecRate">说明</span></h2>'+
      '<div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">电表为预付费卡充值（外部软件控制），租客充值到账后在此登记为电费收入，自动进入电费专账。</div>';
   e.forEach(function(r){
     var p=prop(r.prop);
     var sum=DB.recharges.filter(function(c){return c.roomId===r.id&&c.kind==='elec'&&c.date.indexOf(M)===0}).reduce(function(s,c){return s+c.amt},0);
-    h+='<div class="meter-row"><div class="info"><b>'+esc(p.name)+' '+esc(r.code)+' · '+esc(r.tName||'空置')+'</b><span>本月已登记充值 '+fmt(sum)+'</span></div>'+
+    elecCard+='<div class="meter-row"><div class="info"><b>'+esc(p.name)+' '+esc(r.code)+' · '+esc(r.tName||'空置')+'</b><span>本月已登记充值 '+fmt(sum)+'</span></div>'+
        '<button class="mini-btn" data-act="recharge" data-rid="'+r.id+'">充值登记</button></div>';
   });
-  h+='</div>';
-  h+='<div class="card"><h2>支出登记</h2>'+
+  elecCard+='</div>';
+  var expCard='<div class="card"><h2>支出登记</h2>'+
      '<div class="row-actions"><button class="pri" data-act="expElec">记总电费</button><button class="pri" data-act="expWater">记总水费</button><button data-act="openExpense">记其他支出</button></div>'+
-     '<div style="font-size:12px;color:var(--muted);margin-top:10px">总电费/总水费分别计入电费专账、水费专账，用于核算每项水电的盈亏。</div></div>';
-  h+='<button class="btn-full" data-act="openMeter" style="width:100%;padding:13px 0;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14.5px;font-weight:700">集中抄表</button>';
-  return h;
+     '<div style="font-size:12px;color:var(--muted);margin-top:10px">总电费/总水费分别计入电费专账、水费专账，用于核算每项水电的盈亏。</div>'+
+     '<button class="btn-full" data-act="openMeter" style="width:100%;padding:13px 0;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14.5px;font-weight:700;margin-top:12px">集中抄表</button></div>';
+  return h+(isPC()?'<div class="pc-cols"><div>'+meterCard+elecCard+'</div><div>'+expCard+'</div></div>':meterCard+elecCard+expCard);
 }
 /* ================= 我的 ================= */
 function vMe(){
@@ -733,7 +816,7 @@ function vMe(){
   h+='<div class="card" style="display:flex;align-items:center;gap:14px"><div class="avatar" style="width:52px;height:52px;font-size:20px">房</div><div><div style="font-size:17px;font-weight:800">房东账号</div><div style="font-size:12.5px;color:var(--muted)">'+DB.rooms.length+' 间房 · 在租 '+ (DB.rooms.length-v) +' 间 · 空置 '+v+' 间</div></div></div>';
   var elec=acc.elec,water=acc.water;
   h+='<div style="font-size:14px;font-weight:700;margin:2px 2px 10px">水电分账盈亏</div>';
-  h+='<div class="fen-card">'+
+  h+='<div class="fen-card fc2">'+
      '<div class="it"><span>电费专账（'+M+'）</span><b style="color:'+(elec.in-elec.out>=0?'var(--up)':'var(--down)')+'">'+fmt(elec.in-elec.out)+'</b><div class="mini-bars"><i class="'+(elec.in>elec.out?'r':'g')+'"></i><i class="'+(elec.in>elec.out?'r':'g')+'"></i></div><span style="font-size:11px">收 '+fmt(elec.in)+' · 支 '+fmt(elec.out)+'</span></div>'+
      '<div class="it"><span>水费专账（'+M+'）</span><b style="color:'+(water.in-water.out>=0?'var(--up)':'var(--down)')+'">'+fmt(water.in-water.out)+'</b><div class="mini-bars"><i class="'+(water.in>water.out?'r':'g')+'"></i></div><span style="font-size:11px">收 '+fmt(water.in)+' · 支 '+fmt(water.out)+'</span></div></div>';
   h+='<div style="height:14px"></div>';
@@ -755,21 +838,23 @@ function vContracts(){
   var h=meBack('合同中心');
   var ts=DB.rooms.filter(function(r){return r.tName}).sort(function(a,b){return a.cEnd<b.cEnd?1:-1});
   if(!ts.length){h+='<div style="padding:40px 0;text-align:center;color:var(--muted)">暂无合同</div>';return h}
-  ts.forEach(function(r){
+  var items=ts.map(function(r){
     var d=daysTo(r.cEnd),stTxt,stCls;
     if(d<0){stTxt='已到期 '+(-d)+'天';stCls='chip up'}
     else if(d<=30){stTxt='剩 '+d+'天';stCls='chip warn'}
     else{stTxt='剩 '+d+'天';stCls='chip down'}
-    h+='<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:center"><b>'+esc(r.tName)+' · '+esc(r.code)+'</b><span class="'+stCls+'">'+stTxt+'</span></div>'+
+    return '<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:center"><b>'+esc(r.tName)+' · '+esc(r.code)+'</b><span class="'+stCls+'">'+stTxt+'</span></div>'+
       '<div style="font-size:12.5px;color:var(--muted);margin:6px 0">'+esc(r.cStart)+' 至 '+esc(r.cEnd)+' · '+esc(r.type)+' '+esc(r.area)+' · 租金 '+fmt(r.rent)+'/月 · 押金 '+fmt(r.deposit)+'</div>'+
       '<div class="row-actions"><button class="pri" data-act="renew" data-rid="'+r.id+'">续租</button><button data-act="quit" data-rid="'+r.id+'">退租</button><button data-act="roomBill" data-rid="'+r.id+'">查看账单</button></div></div>';
-  });
+  }).join('');
+  h+=(isPC()?'<div class="tenant-grid">'+items+'</div>':items);
   return h;
 }
 /* ================= 设置 ================= */
 function vSettings(){
   var st=DB.settings;
   var h=meBack('设置');
+  h+='<div class="pc-cols">';
   h+='<div class="card"><h2>主题</h2><div class="seg" id="themeSeg">';
   [['light','日间'],['dark','夜间'],['auto','跟随系统']].forEach(function(f){
     h+='<button class="'+(st.theme===f[0]?'on':'')+'" data-theme-set="'+f[0]+'">'+f[1]+'</button>';
@@ -793,11 +878,13 @@ function vSettings(){
      (st.qr?'<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><img src="'+st.qr+'" style="width:64px;height:64px;border:1px solid var(--line);border-radius:10px;object-fit:contain;background:#fff;flex:0 0 auto"><button class="mini-btn" data-act="clearQr" style="padding:8px 16px">清除收款码</button></div>':'')+
      '<button class="btn-full" data-act="setQr" style="width:100%;padding:12px 0;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:700">'+(st.qr?'更换收款码':'上传收款码')+'</button></div>';
   h+='<div class="card"><h2>计费方式说明</h2><div style="font-size:13px;color:var(--sub);line-height:1.8">· 每间房可在房间详情中单独设置「水表／电表」计费方式：<br>· <b>水表</b>：抄表计费（录入读数自动算水费）或预付费；<br>· <b>电表</b>：预付费卡充值（外部软件控制）或抄表计费；<br>· 预付费仪表不抄表、不出账，充值到账后登记为对应专账收入。</div></div>';
+  h+='</div>';
   return h;
 }
 /* ================= 数据管理 ================= */
 function vData(){
   var h=meBack('数据管理');
+  h+='<div class="pc-cols">';
   h+='<div class="card"><h2>本地数据</h2><div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">全部数据保存在当前浏览器本地（localStorage），不会上传服务器。换设备或清缓存前请先导出备份。</div>'+
      '<div class="row-actions" style="margin:0"><button class="pri" data-act="exportData">导出 JSON 备份</button><button data-act="importData">导入备份</button><button data-act="resetDemo">恢复示例数据</button><button data-act="clearData">清空数据</button></div></div>';
   h+='<div class="card"><h2>导出表格（CSV）</h2><div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">CSV 可用 Excel / WPS 直接打开；租客台账含历史租客。</div>'+
@@ -808,6 +895,7 @@ function vData(){
      '<div class="kv"><span>账单</span><b>'+DB.bills.length+'</b></div>'+
      '<div class="kv"><span>抄表记录</span><b>'+DB.readings.length+'</b></div>'+
      '<div class="kv"><span>流水</span><b>'+DB.flows.length+'</b></div></div>';
+  h+='</div>';
   return h;
 }
 /* ================= 日历待办 ================= */
@@ -818,6 +906,7 @@ function calShift(YM,delta){
 }
 function vCalendar(){
   var YM=state.calYm||curYm(),h=meBack('日历待办');
+  if(isPC())h+='<div class="pc-cols"><div>';
   h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
      '<button data-cal-nav="-1" style="border:1px solid var(--line);background:var(--card);border-radius:10px;width:38px;height:38px;font-size:18px;color:var(--ink)">‹</button>'+
      '<b style="flex:1;text-align:center;font-size:17px">'+YM+'</b>'+
@@ -845,6 +934,7 @@ function vCalendar(){
      '<span><i class="dot-l exp"></i>合同到期 '+expiring.length+' 份</span>'+
      '<span><i class="dot-l rsv"></i>预定 '+reserves.length+' 个</span>'+
      '<span style="margin-left:auto;color:var(--primary-d)">点击日期看当天</span></div>';
+  if(isPC())h+='</div><div>';
   var items=[];
   dueBills.forEach(function(b){
     var r=room(b.roomId),od=overdueDays(b);
@@ -859,7 +949,7 @@ function vCalendar(){
   items.sort(function(x,y){return x.date<y.date?-1:1});
   h+='<div class="card" style="padding:4px 16px"><div style="font-size:13.5px;font-weight:700;padding:10px 0 2px">'+YM+' 待办</div>'+
      (items.length?items.map(function(x){return x.html}).join(''):'<div style="padding:22px 0;text-align:center;color:var(--muted);font-size:13px">本月没有待办事项</div>')+'</div>';
-  return h;
+  return h+(isPC()?'</div></div>':'');
 }
 function calendarDayModal(ds){
   var due=DB.bills.filter(function(b){return b.st==='unpaid'&&b.due===ds});
@@ -875,6 +965,7 @@ function calendarDayModal(ds){
 /* ================= 押金台账 ================= */
 function vDeposit(){
   var h=meBack('押金台账');
+  if(isPC())h+='<div class="pc-narrow">';
   var rented=DB.rooms.filter(function(r){return r.tName});
   var hold=Math.round(rented.reduce(function(s,r){return s+(r.deposit||0)},0)*100)/100;
   var refunded=Math.round(DB.flows.filter(function(f){return f.account==='dep'&&f.cat==='押金退还'&&f.dir==='out'}).reduce(function(s,f){return s+f.amt},0)*100)/100;
@@ -902,7 +993,7 @@ function vDeposit(){
      (ri.length?ri.map(function(f){
        return '<div class="meter-row"><div class="info"><b>'+esc(f.note||'押金收入')+'</b><span>'+esc(f.date)+'</span></div><b style="color:var(--up)">+'+fmt(f.amt)+'</b></div>';
      }).join(''):'<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:13px">暂无押金收入记录（签约勾选「押金计入首期账单」或开具收据并勾选「登记入账」后显示）</div>')+'</div>';
-  return h;
+  return h+(isPC()?'</div>':'');
 }
 /* ================= 收支报表 ================= */
 function vReports(){
@@ -919,16 +1010,16 @@ function vReports(){
      [['this','本月'],['3m','近3月'],['6m','近6月'],['12m','近12月']].map(function(f){
        return '<button class="'+(state.range===f[0]?'on':'')+'" data-range="'+f[0]+'">'+f[1]+'</button>';
      }).join('')+'</div>';
-  h+='<div class="fen-card">'+
+  h+='<div class="fen-card fc5">'+
      fCard('租金总账',acc.rent.in-acc.rent.out,acc.rent.in,acc.rent.out)+
      fCard('电费专账',acc.elec.in-acc.elec.out,acc.elec.in,acc.elec.out)+
      fCard('水费专账',acc.water.in-acc.water.out,acc.water.in,acc.water.out)+
      fCard('押金账本',dep.in-dep.out,dep.in,dep.out)+
      '<div class="it"><span>'+rLabel+' 四账本合计</span><b style="color:'+(tIn-tOut>=0?'var(--up)':'var(--down)')+'">'+fmt(tIn-tOut)+'</b><span style="font-size:11px">总收 '+fmt(tIn)+' · 总支 '+fmt(tOut)+'</span></div></div>';
-  h+='<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px"><div><div style="font-size:13.5px;font-weight:700">当前空置率</div><div style="font-size:12px;color:var(--muted);margin-top:2px">空置 '+DB.rooms.filter(function(r){return rStatus(r)==='vacant'}).length+' 间 · 已预定 '+DB.rooms.filter(function(r){return rStatus(r)==='reserved'}).length+' 间 · 共 '+DB.rooms.length+' 间</div></div><b style="font-size:24px;color:var(--primary)">'+(DB.rooms.length?Math.round(DB.rooms.filter(function(r){return rStatus(r)==='vacant'}).length/DB.rooms.length*100):0)+'%</b></div>';
-  h+='<div class="card"><h2>抄表记录对比</h2><div style="height:180px" id="meterChart"><div style="padding:30px 0;text-align:center;color:var(--muted);font-size:12.5px">图表加载中…</div></div><div id="meterList" style="margin-top:2px"></div></div>';
-  h+='<div class="card" style="height:230px" id="barChart"><div style="padding:40px 0;text-align:center;color:var(--muted)">图表加载中…</div></div>';
-  h+='<div class="card" style="height:210px" id="pieChart"><div style="padding:40px 0;text-align:center;color:var(--muted)">图表加载中…</div></div>';
+  var rateCard='<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px"><div><div style="font-size:13.5px;font-weight:700">当前空置率</div><div style="font-size:12px;color:var(--muted);margin-top:2px">空置 '+DB.rooms.filter(function(r){return rStatus(r)==='vacant'}).length+' 间 · 已预定 '+DB.rooms.filter(function(r){return rStatus(r)==='reserved'}).length+' 间 · 共 '+DB.rooms.length+' 间</div></div><b style="font-size:24px;color:var(--primary)">'+(DB.rooms.length?Math.round(DB.rooms.filter(function(r){return rStatus(r)==='vacant'}).length/DB.rooms.length*100):0)+'%</b></div>';
+  var meterCard='<div class="card"><h2>抄表记录对比</h2><div style="height:180px" id="meterChart"><div style="padding:30px 0;text-align:center;color:var(--muted);font-size:12.5px">图表加载中…</div></div><div id="meterList" style="margin-top:2px"></div></div>';
+  h+='<div class="pc-cols">'+rateCard+meterCard+'</div>';
+  h+='<div class="pc-cols"><div class="card" style="height:230px" id="barChart"><div style="padding:40px 0;text-align:center;color:var(--muted)">图表加载中…</div></div><div class="card" style="height:210px" id="pieChart"><div style="padding:40px 0;text-align:center;color:var(--muted)">图表加载中…</div></div></div>';
   h+='<div style="font-size:12px;color:var(--muted);margin:14px 2px 0">流水记账与四账本收支管理请到「记账本」页。</div>';
   postRender=function(){
     try{drawBar(months);drawPie(acc,rLabel);drawMeterChart()}catch(e){
@@ -965,7 +1056,7 @@ function vLedger(){
   h+='<div class="fen-card">'+books.map(function(bk){
     return '<div class="it"><span>'+bk[0]+'</span><b style="color:'+(bk[2]>=0?'var(--up)':'var(--down)')+';font-size:19px">'+fmt(bk[2])+'</b><span style="font-size:11px">'+bk[1]+'</span><span style="font-size:11px">本月收 '+fmt(bk[3])+' · 支 '+fmt(bk[4])+'</span></div>';
   }).join('')+'</div>';
-  h+='<div class="quick" style="grid-template-columns:1fr 1fr;margin:12px 0 16px">'+
+  h+='<div class="quick two" style="grid-template-columns:1fr 1fr;margin:12px 0 16px">'+
      '<button data-act="openIncome"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>记一笔收入</button>'+
      '<button data-act="openExpense"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg>记一笔支出</button></div>';
   var nMap={this:1,'3m':3,'6m':6,'12m':12};
